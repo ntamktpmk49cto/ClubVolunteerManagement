@@ -1,0 +1,63 @@
+﻿@model ClubVolunteerManagement.Models.Club
+
+@{
+    ViewData["Title"] = "Chỉnh sửa câu lạc bộ";
+}
+
+<div class="container mt-4">
+
+    <h2>Chỉnh sửa câu lạc bộ</h2>
+
+    <form asp-action="Edit"
+          asp-route-id="@Model.Id"
+          method="post">
+
+        @Html.AntiForgeryToken()
+
+        <div asp-validation-summary="ModelOnly"
+             class="text-danger"></div>
+
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">
+                Tên câu lạc bộ
+            </label>
+
+            <input asp-for="Name" class="form-control" />
+
+            <span asp-validation-for="Name"
+                  class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">
+                Mô tả
+            </label>
+
+            <textarea asp-for="Description"
+                      class="form-control"
+                      rows="4"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="LogoUrl" class="form-label">
+                Đường dẫn logo
+            </label>
+
+            <input asp-for="LogoUrl" class="form-control" />
+        </div>
+
+        <button type="submit" class="btn btn-success">
+            Lưu thay đổi
+        </button>
+
+        <a asp-action="Index" class="btn btn-secondary">
+            Hủy
+        </a>
+
+    </form>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,40 @@
+﻿@model ClubVolunteerManagement.Models.Club
+
+@{
+    ViewData["Title"] = "Xóa câu lạc bộ";
+}
+
+<div class="container mt-4">
+
+    <h2 class="text-danger">Xác nhận xóa CLB</h2>
+
+    <div class="alert alert-warning">
+        Bạn có chắc chắn muốn xóa câu lạc bộ này?
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+
+            <h4>@Model.Name</h4>
+            <p>@Model.Description</p>
+
+        </div>
+    </div>
+
+    <form asp-action="Delete"
+          asp-route-id="@Model.Id"
+          method="post">
+
+        @Html.AntiForgeryToken()
+
+        <button type="submit" class="btn btn-danger">
+            Xác nhận xóa
+        </button>
+
+        <a asp-action="Index" class="btn btn-secondary">
+            Hủy
+        </a>
+
+    </form>
+
+</div>

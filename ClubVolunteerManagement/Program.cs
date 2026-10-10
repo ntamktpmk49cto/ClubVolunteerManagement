@@ -3,6 +3,7 @@ using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using ClubVolunteerManagement.Data.Seed;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,5 +67,24 @@ app.MapControllerRoute(
 
 // Identity sử dụng Razor Pages.
 app.MapRazorPages();
+
+app.MapRazorPages();
+
+// Tạo quyền Admin cho tài khoản đã đăng ký.
+// Chỉ chạy trong môi trường Development.
+if (app.Environment.IsDevelopment())
+{
+    var adminEmail =
+        app.Configuration["SeedAdminEmail"];
+
+    if (!string.IsNullOrWhiteSpace(adminEmail))
+    {
+        using var scope = app.Services.CreateScope();
+
+        await IdentitySeeder.SeedAdminAsync(
+            scope.ServiceProvider,
+            adminEmail);
+    }
+}
 
 app.Run();
