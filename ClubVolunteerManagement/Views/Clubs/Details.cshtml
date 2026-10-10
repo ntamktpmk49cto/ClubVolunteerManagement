@@ -1,17 +1,41 @@
 ﻿@model ClubVolunteerManagement.Models.Club
+@using ClubVolunteerManagement.Models
 
 @{
     ViewData["Title"] = "Chi tiết câu lạc bộ";
+
+    ClubMemberStatus? status =
+        ViewData["MembershipStatus"] is ClubMemberStatus value
+            ? value
+            : null;
+
+    bool canManage =
+        ViewData["CanManageMembers"] is true;
 }
 
 <div class="container mt-4">
 
-    <h2>Thông tin câu lạc bộ</h2>
+    <h2>Chi tiết câu lạc bộ</h2>
 
-    <div class="card mt-3">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    <div class="card shadow-sm mt-3">
+
         <div class="card-body">
 
-            <h4 class="card-title">@Model.Name</h4>
+            <h3 class="card-title">@Model.Name</h3>
 
             <p>
                 <strong>Mã CLB:</strong>
@@ -32,20 +56,83 @@
             }
 
             <p>
-                <strong>Ngày tạo (UTC):</strong>
-                @Model.CreatedAtUtc.ToString("dd/MM/yyyy HH:mm")
+                <strong>Ngày tạo:</strong>
+                @Model.CreatedAtUtc.ToString("dd/MM/yyyy")
+                (UTC)
             </p>
 
-            <a asp-action="Edit"
-               asp-route-id="@Model.Id"
-               class="btn btn-warning">
-                Chỉnh sửa
-            </a>
+            <hr />
 
-            <a asp-action="Index"
-               class="btn btn-secondary">
-                Quay lại
-            </a>
+            @if (User.Identity?.IsAuthenticated != true)
+            {
+                <a asp-area="Identity"
+                   asp-page="/Account/Login"
+                   asp-route-returnUrl="@Context.Request.Path"
+                   class="btn btn-primary">
+                    Đăng nhập để tham gia CLB
+                </a>
+            }
+            else if (!User.IsInRole("Admin"))
+            {
+                if (status == null ||
+                status == ClubMemberStatus.Rejected)
+                {
+                    <form asp-controller="ClubMembers"
+                          asp-action="Join"
+                          method="post"
+                          asp-antiforgery="true">
+
+                        <input type="hidden"
+                               name="clubId"
+                               value="@Model.Id" />
+
+                        <button type="submit"
+                                class="btn btn-success">
+                            Tham gia CLB
+                        </button>
+                    </form>
+                }
+                else if (status == ClubMemberStatus.Pending)
+                {
+                    <div class="alert alert-warning">
+                        Yêu cầu tham gia của bạn đang chờ duyệt.
+                    </div>
+                }
+                else if (status == ClubMemberStatus.Approved)
+                {
+                    <div class="alert alert-success">
+                        Bạn đã là thành viên của CLB này.
+                    </div>
+                }
+            }
+
+            <div class="mt-3 d-flex gap-2 flex-wrap">
+
+                @if (canManage)
+                {
+                    <a asp-controller="ClubMembers"
+                       asp-action="Pending"
+                       asp-route-clubId="@Model.Id"
+                       class="btn btn-primary">
+                        Duyệt thành viên
+                    </a>
+                }
+
+                @if (User.IsInRole("Admin"))
+                {
+                    <a asp-action="Edit"
+                       asp-route-id="@Model.Id"
+                       class="btn btn-warning">
+                        Chỉnh sửa CLB
+                    </a>
+                }
+
+                <a asp-action="Index"
+                   class="btn btn-secondary">
+                    Quay lại
+                </a>
+
+            </div>
 
         </div>
     </div>
