@@ -1,6 +1,7 @@
-    
+
 using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
+using ClubVolunteerManagement.Data.Seed;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,9 +25,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(
 builder.Services
     .AddDefaultIdentity<ApplicationUser>(options =>
     {
-        // Dùng cho bản demo khi chưa có email xác thực.
         options.SignIn.RequireConfirmedAccount = false;
-
         options.User.RequireUniqueEmail = true;
 
         options.Password.RequiredLength = 8;
@@ -55,7 +54,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-// Xác thực phải đứng trước phân quyền.
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -64,7 +62,24 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Identity sử dụng Razor Pages.
+// 8. Identity sử dụng Razor Pages.
 app.MapRazorPages();
 
+// 9. Gán quyền Admin trong môi trường Development.
+if (app.Environment.IsDevelopment())
+{
+    var adminEmail =
+        app.Configuration["SeedAdminEmail"];
+
+    if (!string.IsNullOrWhiteSpace(adminEmail))
+    {
+        using var scope = app.Services.CreateScope();
+
+        await IdentitySeeder.SeedAdminAsync(
+            scope.ServiceProvider,
+            adminEmail);
+    }
+}
+
+// 10. Chạy ứng dụng.
 app.Run();
