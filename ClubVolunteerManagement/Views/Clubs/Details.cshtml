@@ -1,0 +1,53 @@
+﻿@model ClubVolunteerManagement.Models.Club
+
+@{
+    ViewData["Title"] = "Chi tiết câu lạc bộ";
+}
+
+<div class="container mt-4">
+
+    <h2>Thông tin câu lạc bộ</h2>
+
+    <div class="card mt-3">
+        <div class="card-body">
+
+            <h4 class="card-title">@Model.Name</h4>
+
+            <p>
+                <strong>Mã CLB:</strong>
+                @Model.Id
+            </p>
+
+            <p>
+                <strong>Mô tả:</strong>
+                @Model.Description
+            </p>
+
+            @if (!string.IsNullOrEmpty(Model.LogoUrl))
+            {
+                <img src="@Model.LogoUrl"
+                     alt="Logo CLB"
+                     style="max-width:150px"
+                     class="mb-3" />
+            }
+
+            <p>
+                <strong>Ngày tạo (UTC):</strong>
+                @Model.CreatedAtUtc.ToString("dd/MM/yyyy HH:mm")
+            </p>
+
+            <a asp-action="Edit"
+               asp-route-id="@Model.Id"
+               class="btn btn-warning">
+                Chỉnh sửa
+            </a>
+
+            <a asp-action="Index"
+               class="btn btn-secondary">
+                Quay lại
+            </a>
+
+        </div>
+    </div>
+
+</div>

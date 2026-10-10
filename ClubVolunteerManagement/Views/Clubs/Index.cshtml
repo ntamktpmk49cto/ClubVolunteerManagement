@@ -1,0 +1,85 @@
+﻿@model IEnumerable<ClubVolunteerManagement.Models.Club>
+
+@{
+    ViewData["Title"] = "Quản lý câu lạc bộ";
+}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Danh sách câu lạc bộ</h2>
+
+        <a asp-controller="Clubs"
+           asp-action="Create"
+           class="btn btn-primary">
+            + Thêm câu lạc bộ
+        </a>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Mã CLB</th>
+                <th>Tên CLB</th>
+                <th>Mô tả</th>
+                <th>Ngày tạo (UTC)</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var club in Model)
+            {
+                <tr>
+                    <td>@club.Id</td>
+                    <td>@club.Name</td>
+                    <td>@club.Description</td>
+                    <td>
+                        @club.CreatedAtUtc.ToString("dd/MM/yyyy")
+                    </td>
+                    <td>
+                        <a asp-action="Details"
+                           asp-route-id="@club.Id"
+                           class="btn btn-info btn-sm">
+                            Chi tiết
+                        </a>
+
+                        <a asp-action="Edit"
+                           asp-route-id="@club.Id"
+                           class="btn btn-warning btn-sm">
+                            Sửa
+                        </a>
+
+                        <a asp-action="Delete"
+                           asp-route-id="@club.Id"
+                           class="btn btn-danger btn-sm">
+                            Xóa
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            Hiện chưa có câu lạc bộ nào.
+        </div>
+    }
+
+</div>
