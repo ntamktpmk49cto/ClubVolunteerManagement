@@ -1,4 +1,5 @@
 ﻿
+using System.Security.Claims;
 using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -30,6 +31,7 @@ namespace ClubVolunteerManagement.Controllers
 
         // GET: /Clubs/Details/5
         [AllowAnonymous]
+
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -42,10 +44,46 @@ namespace ClubVolunteerManagement.Controllers
             if (club == null)
                 return NotFound();
 
+            // Mặc định: chưa tham gia.
+            ViewData["MembershipStatus"] = null;
+
+            // Admin luôn được quản lý yêu cầu của CLB.
+            ViewData["CanManageMembers"] =
+                User.IsInRole("Admin");
+
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var userId = User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+                if (userId != null)
+                {
+                    var membership = await _context.ClubMembers
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(m =>
+                            m.ClubId == club.Id &&
+                            m.UserId == userId);
+
+                    if (membership != null)
+                    {
+                        ViewData["MembershipStatus"] =
+                            membership.Status;
+
+                        if (membership.Status ==
+                                ClubMemberStatus.Approved &&
+                            membership.Role == ClubRole.Manager)
+                        {
+                            ViewData["CanManageMembers"] = true;
+                        }
+                    }
+                }
+            }
+
             return View(club);
         }
 
-     
+
+
         // GET: /Clubs/Create
         [Authorize(Roles = "Admin")]
         public IActionResult Create()

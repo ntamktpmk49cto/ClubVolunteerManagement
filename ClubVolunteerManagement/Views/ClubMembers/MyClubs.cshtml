@@ -1,0 +1,95 @@
+﻿@model List<ClubVolunteerManagement.Models.ClubMember>
+@using ClubVolunteerManagement.Models
+
+@{
+    ViewData["Title"] = "CLB của tôi";
+}
+
+<div class="container mt-4">
+
+    <h2>CLB của tôi</h2>
+
+    <p class="text-muted">
+        Danh sách câu lạc bộ bạn đã gửi yêu cầu tham gia.
+    </p>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            Bạn chưa tham gia câu lạc bộ nào.
+        </div>
+
+        <a asp-controller="Clubs"
+           asp-action="Index"
+           class="btn btn-primary">
+            Khám phá CLB
+        </a>
+    }
+    else
+    {
+        <div class="row">
+
+            @foreach (var item in Model)
+            {
+                <div class="col-md-6 mb-3">
+
+                    <div class="card h-100 shadow-sm">
+
+                        <div class="card-body">
+
+                            <h5 class="card-title">
+                                @item.Club.Name
+                            </h5>
+
+                            <p class="card-text">
+                                @item.Club.Description
+                            </p>
+
+                            <p>
+                                <strong>Trạng thái:</strong>
+
+                                @if (item.Status == ClubMemberStatus.Pending)
+                                {
+                                    <span class="badge bg-warning text-dark">
+                                        Chờ duyệt
+                                    </span>
+                                }
+                                else if (item.Status == ClubMemberStatus.Approved)
+                                {
+                                    <span class="badge bg-success">
+                                        Đã tham gia
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">
+                                        Bị từ chối
+                                    </span>
+                                }
+                        </p>
+
+                        <p>
+                            <strong>Vai trò:</strong>
+
+                            @(item.Role == ClubRole.Manager
+                                                    ? "Ban chủ nhiệm"
+                                                    : "Thành viên")
+                    </p>
+
+                            <a asp-controller="Clubs"
+                               asp-action="Details"
+                               asp-route-id="@item.ClubId"
+                               class="btn btn-outline-primary">
+                                Xem chi tiết
+                            </a>
+
+                        </div>
+                    </div>
+
+                </div>
+                }
+
+        </div>
+    }
+
+</div>

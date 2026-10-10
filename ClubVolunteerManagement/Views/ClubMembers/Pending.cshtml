@@ -1,0 +1,127 @@
+﻿@model List<ClubVolunteerManagement.Models.ClubMember>
+
+@{
+    ViewData["Title"] = "Duyệt thành viên";
+
+    int clubId = (int)(ViewData["ClubId"] ?? 0);
+    string clubName =
+        ViewData["ClubName"]?.ToString() ?? "";
+}
+
+<div class="container mt-4">
+
+    <h2>Danh sách chờ duyệt</h2>
+
+    <p>
+        <strong>Câu lạc bộ:</strong> @clubName
+    </p>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            Hiện chưa có yêu cầu tham gia nào.
+        </div>
+    }
+    else
+    {
+        <table class="table table-bordered table-striped">
+            <thead class="table-dark">
+                <tr>
+                    <th>STT</th>
+                    <th>Họ và tên</th>
+                    <th>MSSV</th>
+                    <th>Email</th>
+                    <th>Ngày gửi</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @{
+                    int stt = 1;
+                }
+
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@stt</td>
+
+                        <td>
+                            @(item.User.FullName
+                                                ?? item.User.UserName)
+                </td>
+
+                        <td>@item.User.StudentCode</td>
+
+                        <td>@item.User.Email</td>
+
+                        <td>
+                            @item.JoinedAtUtc.ToString("dd/MM/yyyy")
+                        </td>
+
+                        <td>
+                            <div class="d-flex gap-2">
+
+                                <form asp-controller="ClubMembers"
+                                      asp-action="Approve"
+                                      method="post"
+                                      asp-antiforgery="true">
+
+                                    <input type="hidden"
+                                           name="memberId"
+                                           value="@item.Id" />
+
+                                    <button type="submit"
+                                            class="btn btn-success btn-sm">
+                                        Duyệt
+                                    </button>
+                                </form>
+
+                                <form asp-controller="ClubMembers"
+                                      asp-action="Reject"
+                                      method="post"
+                                      asp-antiforgery="true">
+
+                                    <input type="hidden"
+                                           name="memberId"
+                                           value="@item.Id" />
+
+                                    <button type="submit"
+                                            class="btn btn-danger btn-sm"
+                                            onclick="return confirm('Từ chối yêu cầu này?')">
+                                        Từ chối
+                                    </button>
+                                </form>
+
+                            </div>
+                        </td>
+                    </tr>
+
+                        stt++;
+                }
+            </tbody>
+        </table>
+    }
+
+    <a asp-controller="Clubs"
+       asp-action="Details"
+       asp-route-id="@clubId"
+       class="btn btn-secondary">
+        Quay lại CLB
+    </a>
+
+</div>
