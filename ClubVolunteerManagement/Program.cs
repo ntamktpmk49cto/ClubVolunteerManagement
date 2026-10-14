@@ -71,6 +71,7 @@ if (app.Environment.IsDevelopment())
     var adminEmail =
         app.Configuration["SeedAdminEmail"];
 
+
     if (!string.IsNullOrWhiteSpace(adminEmail))
     {
         using var scope = app.Services.CreateScope();
