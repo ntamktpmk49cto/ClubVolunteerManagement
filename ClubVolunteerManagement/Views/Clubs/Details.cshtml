@@ -92,21 +92,61 @@
                         </button>
                     </form>
                 }
+
                 else if (status == ClubMemberStatus.Pending)
                 {
                     <div class="alert alert-warning">
-                        Yêu cầu tham gia của bạn đang chờ duyệt.
+                        Yêu cầu tham gia đang chờ duyệt.
                     </div>
+
+                    <form asp-controller="ClubMembers"
+                          asp-action="Leave"
+                          method="post"
+                          onsubmit="return confirm('Hủy yêu cầu tham gia CLB?')">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="clubId"
+                               value="@Model.Id" />
+
+                        <button type="submit"
+                                class="btn btn-outline-danger">
+                            Hủy yêu cầu
+                        </button>
+                    </form>
                 }
                 else if (status == ClubMemberStatus.Approved)
                 {
                     <div class="alert alert-success">
                         Bạn đã là thành viên của CLB này.
                     </div>
+
+                    @if (!canManage)
+                    {
+                        <form asp-controller="ClubMembers"
+                              asp-action="Leave"
+                              method="post"
+                              onsubmit="return confirm('Bạn chắc chắn muốn rời CLB?')">
+
+                            @Html.AntiForgeryToken()
+
+                            <input type="hidden"
+                                   name="clubId"
+                                   value="@Model.Id" />
+
+                            <button type="submit"
+                                    class="btn btn-outline-danger">
+                                Rời CLB
+                            </button>
+                        </form>
+                    }
                 }
+
             }
 
             <div class="mt-3 d-flex gap-2 flex-wrap">
+
 
                 @if (canManage)
                 {
@@ -116,7 +156,15 @@
                        class="btn btn-primary">
                         Duyệt thành viên
                     </a>
+
+                    <a asp-controller="ClubMembers"
+                       asp-action="Members"
+                       asp-route-clubId="@Model.Id"
+                       class="btn btn-info text-white">
+                        Danh sách thành viên
+                    </a>
                 }
+
 
                 @if (User.IsInRole("Admin"))
                 {

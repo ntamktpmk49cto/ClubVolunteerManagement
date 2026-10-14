@@ -9,6 +9,21 @@
 
     <h2>CLB của tôi</h2>
 
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+
     <p class="text-muted">
         Danh sách câu lạc bộ bạn đã gửi yêu cầu tham gia.
     </p>
