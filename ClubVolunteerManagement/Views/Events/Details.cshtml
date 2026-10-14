@@ -1,0 +1,207 @@
+﻿
+@model ClubVolunteerManagement.ViewModels.EventDetailsViewModel
+@using ClubVolunteerManagement.Models
+
+@{
+    ViewData["Title"] = "Chi tiết sự kiện";
+
+    var e = Model.Event;
+
+    // Kiểm tra sự kiện có đang mở đăng ký không.
+    bool registrationOpen =
+        e.Status == EventStatus.Published &&
+        DateTime.UtcNow < e.RegistrationDeadlineUtc &&
+        DateTime.UtcNow < e.StartAtUtc;
+
+    // Kiểm tra sinh viên đã đăng ký hay chưa.
+    bool registered =
+        Model.MyRegistrationStatus == RegistrationStatus.Confirmed ||
+        Model.MyRegistrationStatus == RegistrationStatus.Waitlisted;
+}
+
+<div class="container mt-4">
+
+    <!-- TÊN SỰ KIỆN -->
+    <h2 class="mb-4">@e.Title</h2>
+
+    <!-- THÔNG BÁO -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    <div class="card shadow-sm mt-3">
+        <div class="card-body">
+
+            <!-- CLB TỔ CHỨC -->
+            <p>
+                <strong>CLB tổ chức:</strong>
+                @e.Club.Name
+            </p>
+
+            <!-- ĐỊA ĐIỂM -->
+            <p>
+                <strong>Địa điểm:</strong>
+                @e.Location
+            </p>
+
+            <!-- LOẠI SỰ KIỆN -->
+            <p>
+                <strong>Loại sự kiện:</strong>
+                @e.Type
+            </p>
+
+            <!-- TRẠNG THÁI -->
+            <p>
+                <strong>Trạng thái:</strong>
+                @e.Status
+            </p>
+
+            <!-- THỜI GIAN BẮT ĐẦU -->
+            <p>
+                <strong>Bắt đầu:</strong>
+                @(e.StartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+            </p>
+
+            <!-- THỜI GIAN KẾT THÚC -->
+            <p>
+                <strong>Kết thúc:</strong>
+                @(e.EndAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+            </p>
+
+            <!-- HẠN ĐĂNG KÝ -->
+            <p>
+                <strong>Hạn đăng ký:</strong>
+                @(e.RegistrationDeadlineUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+            </p>
+
+            <!-- SỐ LƯỢNG THAM GIA -->
+            <p>
+                <strong>Số lượng:</strong>
+                @Model.ConfirmedCount / @e.Capacity
+            </p>
+
+            <!-- GIỜ TÌNH NGUYỆN -->
+            <p>
+                <strong>Giờ tình nguyện:</strong>
+                @(e.VolunteerHours.ToString("0.##")) giờ
+            </p>
+
+            <!-- MÔ TẢ -->
+            <p>
+                <strong>Mô tả:</strong>
+            </p>
+
+            <p>
+                @(string.IsNullOrWhiteSpace(e.Description)
+                    ? "Chưa có mô tả."
+                    : e.Description)
+            </p>
+
+            <hr />
+
+            <!-- CHỨC NĂNG ĐĂNG KÝ THAM GIA -->
+
+            @if (User.Identity?.IsAuthenticated != true)
+            {
+                <!-- CHƯA ĐĂNG NHẬP -->
+                <a asp-area="Identity"
+                   asp-page="/Account/Login"
+                   asp-route-returnUrl="@Context.Request.Path"
+                   class="btn btn-primary">
+                    Đăng nhập để đăng ký
+                </a>
+            }
+            else
+            {
+                <!-- ĐÃ ĐĂNG KÝ THÀNH CÔNG -->
+                @if (Model.MyRegistrationStatus ==
+                     RegistrationStatus.Confirmed)
+                {
+                    <div class="alert alert-success">
+                        Bạn đã đăng ký tham gia sự kiện thành công.
+                    </div>
+                }
+
+                <!-- ĐANG TRONG DANH SÁCH CHỜ -->
+                @if (Model.MyRegistrationStatus ==
+                     RegistrationStatus.Waitlisted)
+                {
+                    <div class="alert alert-warning">
+                        Sự kiện đã đủ chỗ.
+                        Bạn đang ở trong danh sách chờ.
+                    </div>
+                }
+
+                <!-- ĐĂNG KÝ THAM GIA -->
+                @if (registrationOpen && !registered)
+                {
+                    <form asp-controller="EventRegistrations"
+                          asp-action="Register"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="eventId"
+                               value="@e.Id" />
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Đăng ký tham gia
+                        </button>
+                    </form>
+                }
+
+                <!-- HỦY ĐĂNG KÝ -->
+                @if (registrationOpen && registered)
+                {
+                    <form asp-controller="EventRegistrations"
+                          asp-action="Cancel"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="eventId"
+                               value="@e.Id" />
+
+                        <button type="submit"
+                                class="btn btn-danger"
+                                onclick="return confirm('Bạn có chắc chắn muốn hủy đăng ký?')">
+                            Hủy đăng ký
+                        </button>
+                    </form>
+                }
+
+                <!-- ĐÃ ĐÓNG ĐĂNG KÝ -->
+                @if (!registrationOpen)
+                {
+                    <div class="alert alert-secondary">
+                        Sự kiện hiện không mở đăng ký.
+                    </div>
+                }
+            }
+
+            <!-- QUAY LẠI -->
+            <div class="mt-3">
+                <a asp-controller="Events"
+                   asp-action="Index"
+                   class="btn btn-secondary">
+                    Quay lại danh sách
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+</div>

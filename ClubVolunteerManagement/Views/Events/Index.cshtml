@@ -1,0 +1,148 @@
+﻿@model ClubVolunteerManagement.ViewModels.EventsIndexViewModel
+@using ClubVolunteerManagement.Models
+
+@{
+    ViewData["Title"] = "Danh sách sự kiện";
+}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between mb-3">
+        <h2>Danh sách sự kiện</h2>
+
+        @if (Model.IsAdmin || Model.ManagedClubIds.Any())
+        {
+            <a asp-action="Create"
+               class="btn btn-primary">
+                + Tạo sự kiện
+            </a>
+        }
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+            <tr>
+                <th>Tên sự kiện</th>
+                <th>CLB</th>
+                <th>Loại</th>
+                <th>Thời gian</th>
+                <th>Số chỗ</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var e in Model.Events)
+            {
+                var canManage =
+                    Model.IsAdmin ||
+                    Model.ManagedClubIds.Contains(e.ClubId);
+
+                <tr>
+                    <td>@e.Title</td>
+                    <td>@e.Club.Name</td>
+                    <td>@e.Type</td>
+                    <td>@(e.StartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+                    </td>
+                    <td>@e.Capacity</td>
+                    <td>@e.Status</td>
+                    <td>
+                        <a asp-action="Details"
+                           asp-route-id="@e.Id"
+                           class="btn btn-info btn-sm mb-1">
+                            Chi tiết
+                        </a>
+                        @if (canManage &&
+                             (e.Status == EventStatus.Draft ||
+                              e.Status == EventStatus.Published) &&
+                             e.StartAtUtc > DateTime.UtcNow)
+                        {
+                            <a asp-action="Edit"
+                               asp-route-id="@e.Id"
+                               class="btn btn-warning btn-sm">
+                                Sửa
+                            </a>
+                        }
+
+                        @if (canManage &&
+                             e.Status == EventStatus.Draft)
+                        {
+                            <form asp-action="Submit"
+                                  asp-route-id="@e.Id"
+                                  method="post"
+                                  class="d-inline">
+
+                                @Html.AntiForgeryToken()
+
+                                <button type="submit"
+                                        class="btn btn-primary btn-sm">
+                                    Gửi duyệt
+                                </button>
+                            </form>
+                        }
+
+
+                        @if (Model.IsAdmin &&
+                             e.Status == EventStatus.PendingApproval)
+                        {
+                            <form asp-action="Approve"
+                                  asp-route-id="@e.Id"
+                                  method="post"
+                                  class="d-inline">
+                                @Html.AntiForgeryToken()
+
+                                <button type="submit"
+                                        class="btn btn-success btn-sm mb-1">
+                                    Duyệt
+                                </button>
+                            </form>
+                        }
+
+                        @if (canManage &&
+                             e.Status == EventStatus.Published &&
+                             e.StartAtUtc > DateTime.UtcNow)
+                        {
+                            <form asp-action="CancelEvent"
+                                  asp-route-id="@e.Id"
+                                  method="post"
+                                  class="d-inline">
+
+                                @Html.AntiForgeryToken()
+
+                                <button type="submit"
+                                        class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Bạn chắc chắn muốn hủy sự kiện này?')">
+                                    Hủy sự kiện
+                                </button>
+                            </form>
+                        }
+
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (!Model.Events.Any())
+    {
+        <div class="alert alert-info">
+            Hiện chưa có sự kiện nào.
+        </div>
+    }
+
+</div>
