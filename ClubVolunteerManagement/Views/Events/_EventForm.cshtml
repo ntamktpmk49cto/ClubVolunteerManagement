@@ -1,0 +1,219 @@
+﻿@model ClubVolunteerManagement.ViewModels.EventFormViewModel
+@using ClubVolunteerManagement.Models
+
+@{
+    // Lấy thời gian hiện tại theo giờ Việt Nam (UTC+7).
+    var nowVN = DateTime.UtcNow.AddHours(7);
+
+    // Giới hạn thời gian nhập tối thiểu.
+    var minDateTime = nowVN.AddMinutes(1)
+        .ToString("yyyy-MM-ddTHH:mm");
+
+    // Kiểm tra có đang chỉnh sửa sự kiện không.
+    var isEdit = Model.Id > 0;
+}
+
+<div asp-validation-summary="All"
+     class="text-danger mb-3"></div>
+
+<!-- 1. CÂU LẠC BỘ TỔ CHỨC -->
+<div class="mb-3">
+    <label asp-for="ClubId" class="form-label fw-bold">
+        Câu lạc bộ tổ chức
+    </label>
+
+    <select asp-for="ClubId"
+            asp-items="Model.ClubOptions"
+            disabled="@isEdit"
+            class="form-select">
+        <option value="0">-- Chọn câu lạc bộ --</option>
+    </select>
+
+    <span asp-validation-for="ClubId"
+          class="text-danger"></span>
+</div>
+
+<!-- 2. TÊN SỰ KIỆN -->
+<div class="mb-3">
+    <label asp-for="Title" class="form-label fw-bold">
+        Tên sự kiện
+    </label>
+
+    <input asp-for="Title"
+           class="form-control"
+           placeholder="Nhập tên sự kiện" />
+
+    <span asp-validation-for="Title"
+          class="text-danger"></span>
+</div>
+
+<!-- 3. MÔ TẢ -->
+<div class="mb-3">
+    <label asp-for="Description" class="form-label fw-bold">
+        Mô tả sự kiện
+    </label>
+
+    <textarea asp-for="Description"
+              rows="4"
+              class="form-control"
+              placeholder="Nhập nội dung sự kiện"></textarea>
+
+    <span asp-validation-for="Description"
+          class="text-danger"></span>
+</div>
+
+<!-- 4. ĐỊA ĐIỂM -->
+<div class="mb-3">
+    <label asp-for="Location" class="form-label fw-bold">
+        Địa điểm tổ chức
+    </label>
+
+    <input asp-for="Location"
+           class="form-control"
+           placeholder="Nhập địa điểm tổ chức" />
+
+    <span asp-validation-for="Location"
+          class="text-danger"></span>
+</div>
+
+<!-- 5. LOẠI SỰ KIỆN -->
+<div class="mb-3">
+    <label asp-for="Type" class="form-label fw-bold">
+        Loại sự kiện
+    </label>
+
+    <select asp-for="Type" class="form-select">
+        <option value="@((int)EventType.ClubMeeting)">
+            Sinh hoạt câu lạc bộ
+        </option>
+
+        <option value="@((int)EventType.Volunteer)">
+            Hoạt động tình nguyện
+        </option>
+
+        <option value="@((int)EventType.Workshop)">
+            Hội thảo / Workshop
+        </option>
+    </select>
+
+    <span asp-validation-for="Type"
+          class="text-danger"></span>
+</div>
+
+<hr />
+
+<h5 class="mb-3">Thời gian tổ chức và đăng ký</h5>
+
+<div class="alert alert-info">
+    Vui lòng chọn thời gian trong tương lai.
+    Thời gian kết thúc phải sau thời gian bắt đầu.
+    Hạn đăng ký phải trước hoặc bằng thời gian bắt đầu.
+    Tất cả thời gian được nhập theo giờ Việt Nam.
+</div>
+
+<!-- 6. THỜI GIAN BẮT ĐẦU -->
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label asp-for="StartAtLocal"
+               class="form-label fw-bold">
+            Thời gian bắt đầu
+        </label>
+
+        <input asp-for="StartAtLocal"
+               type="datetime-local"
+               asp-format="{0:yyyy-MM-ddTHH:mm}"
+               min="@minDateTime"
+               step="60"
+               class="form-control"
+               required />
+
+        <span asp-validation-for="StartAtLocal"
+              class="text-danger"></span>
+    </div>
+
+    <!-- 7. THỜI GIAN KẾT THÚC -->
+    <div class="col-md-6 mb-3">
+        <label asp-for="EndAtLocal"
+               class="form-label fw-bold">
+            Thời gian kết thúc
+        </label>
+
+        <input asp-for="EndAtLocal"
+               type="datetime-local"
+               asp-format="{0:yyyy-MM-ddTHH:mm}"
+               min="@minDateTime"
+               step="60"
+               class="form-control"
+               required />
+
+        <span asp-validation-for="EndAtLocal"
+              class="text-danger"></span>
+    </div>
+</div>
+
+<!-- 8. HẠN ĐĂNG KÝ -->
+
+<div class="mb-3">
+    <label asp-for="RegistrationDeadlineLocal"
+           class="form-label fw-bold">
+        Hạn đăng ký tham gia
+    </label>
+
+    <input asp-for="RegistrationDeadlineLocal"
+           type="datetime-local"
+           asp-format="{0:yyyy-MM-ddTHH:mm}"
+           min="@minDateTime"
+           step="60"
+           class="form-control"
+           required />
+
+    <span asp-validation-for="RegistrationDeadlineLocal"
+          class="text-danger"></span>
+
+    <small class="text-muted">
+        Hạn đăng ký phải ở tương lai và
+        không được sau thời gian bắt đầu sự kiện.
+    </small>
+</div>
+
+
+    <!-- 9. SỐ LƯỢNG -->
+    <div class="col-md-6 mb-3">
+        <label asp-for="Capacity"
+               class="form-label fw-bold">
+            Số lượng tối đa
+        </label>
+
+        <input asp-for="Capacity"
+               type="number"
+               min="1"
+               max="10000"
+               class="form-control" />
+
+        <span asp-validation-for="Capacity"
+              class="text-danger"></span>
+    </div>
+
+    <!-- 10. GIỜ TÌNH NGUYỆN -->
+    <div class="col-md-6 mb-3">
+        <label asp-for="VolunteerHours"
+               class="form-label fw-bold">
+            Số giờ tình nguyện
+        </label>
+
+        <input asp-for="VolunteerHours"
+               type="number"
+               min="0"
+               max="999.99"
+               step="0.5"
+               class="form-control" />
+
+        <span asp-validation-for="VolunteerHours"
+              class="text-danger"></span>
+    </div>
+</div>
+
+<div class="alert alert-secondary">
+    Chỉ sự kiện thuộc loại hoạt động tình nguyện
+    mới được ghi nhận giờ tình nguyện.
+</div>
