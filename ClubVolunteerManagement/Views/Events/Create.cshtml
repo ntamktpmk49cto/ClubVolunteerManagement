@@ -1,0 +1,35 @@
+﻿@model ClubVolunteerManagement.ViewModels.EventFormViewModel
+
+@{
+    ViewData["Title"] = "Tạo sự kiện";
+}
+
+<div class="container mt-4">
+    <h2>Tạo sự kiện mới</h2>
+
+    <div class="card shadow-sm mt-3">
+        <div class="card-body">
+
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+
+                <partial name="_EventForm" model="Model" />
+
+                <button type="submit"
+                        class="btn btn-success">
+                    Lưu bản nháp
+                </button>
+
+                <a asp-action="Index"
+                   class="btn btn-secondary">
+                    Quay lại
+                </a>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

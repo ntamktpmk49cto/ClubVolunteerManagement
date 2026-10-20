@@ -255,5 +255,205 @@ namespace ClubVolunteerManagement.Controllers
 
             return View(memberships);
         }
+    
+ // GET: /ClubMembers/Members?clubId=1
+[HttpGet]
+        public async Task<IActionResult> Members(int clubId)
+        {
+            var club = await _context.Clubs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == clubId);
+
+            if (club == null)
+                return NotFound();
+
+            if (!await CanManageClubAsync(clubId))
+                return Forbid();
+
+            var members = await _context.ClubMembers
+                .Include(m => m.User)
+                .AsNoTracking()
+                .Where(m =>
+                    m.ClubId == clubId &&
+                    m.Status == ClubMemberStatus.Approved)
+                .OrderBy(m => m.Role == ClubRole.Manager ? 0 : 1)
+                .ThenBy(m => m.User.FullName)
+                .ToListAsync();
+
+            ViewData["ClubId"] = clubId;
+            ViewData["ClubName"] = club.Name;
+
+            return View(members);
+        }
+
+        // POST: /ClubMembers/Promote
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Promote(int memberId)
+        {
+            var member = await _context.ClubMembers
+                .FindAsync(memberId);
+
+            if (member == null)
+                return NotFound();
+
+            if (member.Status != ClubMemberStatus.Approved)
+            {
+                TempData["Error"] =
+                    "Chỉ bổ nhiệm thành viên đã được duyệt.";
+            }
+            else if (member.Role == ClubRole.Manager)
+            {
+                TempData["Error"] =
+                    "Sinh viên đã là Ban chủ nhiệm.";
+            }
+            else
+            {
+                member.Role = ClubRole.Manager;
+                await _context.SaveChangesAsync();
+
+                TempData["Success"] =
+                    "Bổ nhiệm Ban chủ nhiệm thành công!";
+            }
+
+            return RedirectToAction(
+                nameof(Members),
+                new { clubId = member.ClubId });
+        }
+
+        // POST: /ClubMembers/Demote
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Demote(int memberId)
+        {
+            var member = await _context.ClubMembers
+                .FindAsync(memberId);
+
+            if (member == null)
+                return NotFound();
+
+            if (member.Status != ClubMemberStatus.Approved ||
+                member.Role != ClubRole.Manager)
+            {
+                TempData["Error"] =
+                    "Người này không phải Ban chủ nhiệm hợp lệ.";
+            }
+            else
+            {
+                member.Role = ClubRole.Member;
+                await _context.SaveChangesAsync();
+
+                TempData["Success"] =
+                    "Đã chuyển về thành viên thường.";
+            }
+
+            return RedirectToAction(
+                nameof(Members),
+                new { clubId = member.ClubId });
+        }
+
+        // POST: /ClubMembers/Remove
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Remove(int memberId)
+        {
+            var member = await _context.ClubMembers
+                .FindAsync(memberId);
+
+            if (member == null)
+                return NotFound();
+
+            if (!await CanManageClubAsync(member.ClubId))
+                return Forbid();
+
+            var currentUserId = _userManager.GetUserId(User);
+            bool isAdmin = User.IsInRole("Admin");
+
+            if (member.UserId == currentUserId)
+            {
+                TempData["Error"] =
+                    "Không thể tự xóa mình bằng chức năng quản lý.";
+
+                return RedirectToAction(
+                    nameof(Members),
+                    new { clubId = member.ClubId });
+            }
+
+            if (member.Role == ClubRole.Manager && !isAdmin)
+                return Forbid();
+
+            if (member.Status != ClubMemberStatus.Approved)
+            {
+                TempData["Error"] =
+                    "Chỉ xóa thành viên đã được duyệt.";
+
+                return RedirectToAction(
+                    nameof(Members),
+                    new { clubId = member.ClubId });
+            }
+
+            int clubId = member.ClubId;
+
+            _context.ClubMembers.Remove(member);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] =
+                "Đã xóa thành viên khỏi CLB.";
+
+            return RedirectToAction(
+                nameof(Members),
+                new { clubId });
+        }
+
+        // POST: /ClubMembers/Leave
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Leave(int clubId)
+        {
+            var userId = _userManager.GetUserId(User);
+
+            if (userId == null)
+                return Challenge();
+
+            var member = await _context.ClubMembers
+                .FirstOrDefaultAsync(m =>
+                    m.ClubId == clubId &&
+                    m.UserId == userId);
+
+            if (member == null)
+                return NotFound();
+
+            if (member.Role == ClubRole.Manager &&
+                member.Status == ClubMemberStatus.Approved)
+            {
+                TempData["Error"] =
+                    "Ban chủ nhiệm cần được thu hồi quyền trước khi rời CLB.";
+
+                return RedirectToAction(
+                    "Details", "Clubs", new { id = clubId });
+            }
+
+            if (member.Status != ClubMemberStatus.Approved &&
+                member.Status != ClubMemberStatus.Pending)
+            {
+                return BadRequest("Trạng thái không hợp lệ.");
+            }
+
+            bool wasPending =
+                member.Status == ClubMemberStatus.Pending;
+
+            _context.ClubMembers.Remove(member);
+            await _context.SaveChangesAsync();
+
+            TempData["Success"] = wasPending
+                ? "Đã hủy yêu cầu tham gia CLB."
+                : "Bạn đã rời câu lạc bộ thành công.";
+
+            return RedirectToAction(nameof(MyClubs));
+        }
+
+
     }
 }

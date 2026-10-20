@@ -4,11 +4,13 @@ using ClubVolunteerManagement.Models;
 using ClubVolunteerManagement.Data.Seed;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using ClubVolunteerManagement.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Cấu hình ASP.NET Core MVC.
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<EventRegistrationService>();
 builder.Services.AddRazorPages();
 
 // 2. Đọc chuỗi kết nối SQL Server.
