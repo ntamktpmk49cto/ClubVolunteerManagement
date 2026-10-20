@@ -119,8 +119,8 @@ public class CheckInController : Controller
         return File(png, "image/png");
     }
 
-    // Mở trang xác nhận sau khi quét QR.
-/*    [HttpGet]
+    // GET: Hiển thị trang xác nhận điểm danh sau khi quét QR.
+    [HttpGet]
     public async Task<IActionResult> Attend(
         int sessionId,
         string token)
@@ -130,19 +130,23 @@ public class CheckInController : Controller
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
         if (!IsSessionValid(session, token))
-            return BadRequest("Mã QR không hợp lệ hoặc đã hết hạn.");
+        {
+            return BadRequest(
+                "Mã QR không hợp lệ hoặc đã hết hạn.");
+        }
 
         ViewBag.SessionId = sessionId;
         ViewBag.Token = token;
         ViewBag.EventTitle = session!.Event.Title;
 
         return View();
-    }*/
+    }
 
-    // Xác nhận điểm danh và cộng giờ trong cùng transaction.
+    // POST: Xác nhận điểm danh và cộng giờ tình nguyện.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Attend(
+    [ActionName("Attend")]
+    public async Task<IActionResult> AttendConfirm(
         int sessionId,
         string token)
     {
@@ -150,7 +154,9 @@ public class CheckInController : Controller
             ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
+        {
             return Challenge();
+        }
 
         await using var transaction =
             await _context.Database.BeginTransactionAsync();
@@ -160,10 +166,14 @@ public class CheckInController : Controller
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
         if (!IsSessionValid(session, token))
-            return BadRequest("Mã QR không hợp lệ hoặc đã hết hạn.");
+        {
+            return BadRequest(
+                "Mã QR không hợp lệ hoặc đã hết hạn.");
+        }
 
         var eventId = session!.EventId;
 
+        // Kiểm tra người dùng đã đăng ký và được xác nhận.
         var registered = await _context.EventRegistrations
             .AnyAsync(r =>
                 r.EventId == eventId &&
@@ -171,17 +181,24 @@ public class CheckInController : Controller
                 r.Status == RegistrationStatus.Confirmed);
 
         if (!registered)
+        {
             return BadRequest(
                 "Bạn chưa được xác nhận đăng ký sự kiện này.");
+        }
 
+        // Không cho điểm danh trùng sự kiện.
         var alreadyCheckedIn = await _context.Attendances
             .AnyAsync(a =>
                 a.EventId == eventId &&
                 a.UserId == userId);
 
         if (alreadyCheckedIn)
-            return BadRequest("Bạn đã điểm danh sự kiện này rồi.");
+        {
+            return BadRequest(
+                "Bạn đã điểm danh sự kiện này rồi.");
+        }
 
+        // Tạo bản ghi điểm danh.
         var attendance = new Attendance
         {
             EventId = eventId,
@@ -194,90 +211,14 @@ public class CheckInController : Controller
         _context.Attendances.Add(attendance);
         await _context.SaveChangesAsync();
 
-        // Chỉ cộng giờ từ dữ liệu sự kiện trên máy chủ.
+        // Lấy số giờ từ sự kiện trên máy chủ.
         var hours = session.Event.VolunteerHours;
 
         if (hours < 0)
-            return BadRequest("Số giờ tình nguyện không hợp lệ.");
-
-        var volunteerHour = new VolunteerHour
         {
-            AttendanceId = attendance.Id,
-            UserId = userId,
-            EventId = eventId,
-            Hours = hours,
-            GrantedAtUtc = DateTime.UtcNow
-        };
-
-        _context.VolunteerHours.Add(volunteerHour);
-        await _context.SaveChangesAsync();
-
-        await transaction.CommitAsync();
-
-        return Content(
-            $"Điểm danh thành công! Bạn được ghi nhận {hours} giờ tình nguyện.");
-    }
-
-    [HttpGet]
-    public IActionResult Create()
-    {
-        return View();
-    }
-
-    // Đóng phiên điểm danh.
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> CloseSession(int sessionId)
-    {
-        var session = await _context.CheckInSessions
-            .FirstOrDefaultAsync(s => s.Id == sessionId);
-
-        if (session == null)
-            return NotFound();
-
-        session.IsOpen = false;
-        session.ClosedAtUtc = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync();
-
-        return Content("Đã đóng phiên điểm danh.");
-    }
-
-    private static string HashToken(string token)
-    {
-        return Convert.ToHexString(
-            SHA256.HashData(Encoding.UTF8.GetBytes(token)));
-    }
-
-    private static bool TokenMatches(
-        string token,
-        string expectedHash)
-    {
-        try
-        {
-            var actual = Convert.FromHexString(HashToken(token));
-            var expected = Convert.FromHexString(expectedHash);
-
-            return actual.Length == expected.Length &&
-                CryptographicOperations.FixedTimeEquals(
-                    actual, expected);
+            return BadRequest(
+                "Số giờ tình nguyện không hợp lệ.");
         }
-        catch (FormatException)
-        {
-            return false;
-        }
-    }
 
-    private static bool IsSessionValid(
-        CheckInSession? session,
-        string token)
-    {
-        return session != null &&
-            session.IsOpen &&
-            session.ClosedAtUtc == null &&
-            session.TokenExpiresAtUtc.HasValue &&
-            session.TokenExpiresAtUtc.Value > DateTime.UtcNow &&
-            !string.IsNullOrWhiteSpace(session.TokenHash) &&
-            TokenMatches(token, session.TokenHash);
-    }
-}
+        // Cộng giờ tình nguyện cho lần điểm danh này.
+        var

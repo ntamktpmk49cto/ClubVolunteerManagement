@@ -41,10 +41,10 @@ namespace ClubVolunteerManagement.Controllers
                 m.Role == ClubRole.Manager);
         }
 
-        // ===========================
+        //    ======
         // 1. SINH VIÊN THAM GIA CLB
         // POST: /ClubMembers/Join
-        // ===========================
+        //    ======
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Join(int clubId)
@@ -124,10 +124,10 @@ namespace ClubVolunteerManagement.Controllers
                 "Details", "Clubs", new { id = clubId });
         }
 
-        // ===========================
+        //    ======
         // 2. DANH SÁCH CHỜ DUYỆT
         // GET: /ClubMembers/Pending?clubId=1
-        // ===========================
+        //    ======
         [HttpGet]
         public async Task<IActionResult> Pending(int clubId)
         {
@@ -156,10 +156,10 @@ namespace ClubVolunteerManagement.Controllers
             return View(members);
         }
 
-        // ===========================
+        //    ======
         // 3. DUYỆT THÀNH VIÊN
         // POST: /ClubMembers/Approve
-        // ===========================
+        //    ======
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(int memberId)
@@ -195,10 +195,10 @@ namespace ClubVolunteerManagement.Controllers
                 new { clubId = member.ClubId });
         }
 
-        // ===========================
+        //    ======
         // 4. TỪ CHỐI THÀNH VIÊN
         // POST: /ClubMembers/Reject
-        // ===========================
+        //    ======
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reject(int memberId)
@@ -234,10 +234,10 @@ namespace ClubVolunteerManagement.Controllers
                 new { clubId = member.ClubId });
         }
 
-        // ===========================
+        //    ======
         // 5. CLB CỦA TÔI
         // GET: /ClubMembers/MyClubs
-        // ===========================
+        //    ======
         [HttpGet]
         public async Task<IActionResult> MyClubs()
         {
