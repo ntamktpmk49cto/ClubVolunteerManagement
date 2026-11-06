@@ -23,6 +23,7 @@ public class CheckInController : Controller
 
     // Tạo phiên điểm danh.
     // TODO: Giới hạn action này cho đúng vai trò quản lý sự kiện.
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSession(int eventId)
@@ -187,7 +188,6 @@ public class CheckInController : Controller
             return BadRequest(
                 "Bạn chưa được xác nhận đăng ký sự kiện này.");
         }
-
         // Không cho điểm danh trùng sự kiện.
         var alreadyCheckedIn = await _context.Attendances
             .AnyAsync(a =>
@@ -249,6 +249,7 @@ public class CheckInController : Controller
     }
 
     // Đóng phiên điểm danh.
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CloseSession(int sessionId)
@@ -293,37 +294,42 @@ public class CheckInController : Controller
     }
 
     private static bool IsSessionValid(
-        CheckInSession? session,
-        string token)
+    CheckInSession? session,
+    string token)
     {
         return session != null &&
-            session.IsOpen &&
-            session.ClosedAtUtc == null &&
-            session.TokenExpiresAtUtc.HasValue &&
-            session.TokenExpiresAtUtc.Value > DateTime.UtcNow &&
-            !string.IsNullOrWhiteSpace(session.TokenHash) &&
-            TokenMatches(token, session.TokenHash);
+               session.IsOpen &&
+               session.ClosedAtUtc == null &&
+               session.TokenExpiresAtUtc.HasValue &&
+               session.TokenExpiresAtUtc.Value > DateTime.UtcNow &&
+               !string.IsNullOrWhiteSpace(session.TokenHash) &&
+               TokenMatches(token, session.TokenHash);
     }
 
-    // GET: Xem mã QR của sự kiện (dành cho người dùng/thành viên)
+    // GET: Xem thông tin phiên điểm danh.
     [HttpGet]
     public async Task<IActionResult> ViewQr(int eventId)
     {
         var session = await _context.CheckInSessions
             .Include(s => s.Event)
-            .FirstOrDefaultAsync(s => s.EventId == eventId && s.IsOpen);
+            .FirstOrDefaultAsync(s =>
+                s.EventId == eventId && s.IsOpen);
 
-        if (session == null || (session.TokenExpiresAtUtc.HasValue && session.TokenExpiresAtUtc.Value <= DateTime.UtcNow))
+        if (session == null ||
+            session.ClosedAtUtc != null ||
+            !session.TokenExpiresAtUtc.HasValue ||
+            session.TokenExpiresAtUtc.Value <= DateTime.UtcNow)
         {
-            TempData["Error"] = "Sự kiện hiện chưa mở phiên điểm danh hoặc phiên đã hết hạn.";
-            return RedirectToAction("Details", "Events", new { id = eventId });
+            TempData["Error"] =
+                "Sự kiện hiện chưa mở phiên điểm danh hoặc phiên đã hết hạn.";
+
+            return RedirectToAction(
+                "Details", "Events", new { id = eventId });
         }
 
         ViewBag.SessionId = session.Id;
         ViewBag.EventTitle = session.Event.Title;
 
-        // Giữ nguyên action QrImage hiện tại nhưng bỏ chặn [Authorize(Roles = "Admin")] trên QrImage 
-        // để ảnh QR tải được cho người xem.
         return View(session);
     }
 }
