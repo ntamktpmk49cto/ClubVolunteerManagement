@@ -20,6 +20,7 @@ public class CheckInController : Controller
         _context = context;
     }
 
+
     // Tạo phiên điểm danh.
     // TODO: Giới hạn action này cho đúng vai trò quản lý sự kiện.
     [HttpPost]
@@ -85,6 +86,7 @@ public class CheckInController : Controller
     }
 
     // Tạo ảnh QR chứa URL điểm danh.
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> QrImage(
         int sessionId,
@@ -221,4 +223,107 @@ public class CheckInController : Controller
         }
 
         // Cộng giờ tình nguyện cho lần điểm danh này.
-        var
+        var volunteerHour = new VolunteerHour
+        {
+            AttendanceId = attendance.Id,
+            UserId = userId,
+            EventId = eventId,
+            Hours = hours,
+            GrantedAtUtc = DateTime.UtcNow
+        };
+
+        _context.VolunteerHours.Add(volunteerHour);
+        await _context.SaveChangesAsync();
+
+        // Chỉ xác nhận khi cả điểm danh và giờ đều lưu thành công.
+        await transaction.CommitAsync();
+
+        return Content(
+            $"Điểm danh thành công! Bạn được ghi nhận {hours} giờ tình nguyện.");
+    }
+
+    [HttpGet]
+    public IActionResult Create()
+    {
+        return View();
+    }
+
+    // Đóng phiên điểm danh.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CloseSession(int sessionId)
+    {
+        var session = await _context.CheckInSessions
+            .FirstOrDefaultAsync(s => s.Id == sessionId);
+
+        if (session == null)
+            return NotFound();
+
+        session.IsOpen = false;
+        session.ClosedAtUtc = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return Content("Đã đóng phiên điểm danh.");
+    }
+
+    private static string HashToken(string token)
+    {
+        return Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+    }
+
+    private static bool TokenMatches(
+        string token,
+        string expectedHash)
+    {
+        try
+        {
+            var actual = Convert.FromHexString(HashToken(token));
+            var expected = Convert.FromHexString(expectedHash);
+
+            return actual.Length == expected.Length &&
+                CryptographicOperations.FixedTimeEquals(
+                    actual, expected);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsSessionValid(
+        CheckInSession? session,
+        string token)
+    {
+        return session != null &&
+            session.IsOpen &&
+            session.ClosedAtUtc == null &&
+            session.TokenExpiresAtUtc.HasValue &&
+            session.TokenExpiresAtUtc.Value > DateTime.UtcNow &&
+            !string.IsNullOrWhiteSpace(session.TokenHash) &&
+            TokenMatches(token, session.TokenHash);
+    }
+
+    // GET: Xem mã QR của sự kiện (dành cho người dùng/thành viên)
+    [HttpGet]
+    public async Task<IActionResult> ViewQr(int eventId)
+    {
+        var session = await _context.CheckInSessions
+            .Include(s => s.Event)
+            .FirstOrDefaultAsync(s => s.EventId == eventId && s.IsOpen);
+
+        if (session == null || (session.TokenExpiresAtUtc.HasValue && session.TokenExpiresAtUtc.Value <= DateTime.UtcNow))
+        {
+            TempData["Error"] = "Sự kiện hiện chưa mở phiên điểm danh hoặc phiên đã hết hạn.";
+            return RedirectToAction("Details", "Events", new { id = eventId });
+        }
+
+        ViewBag.SessionId = session.Id;
+        ViewBag.EventTitle = session.Event.Title;
+
+        // Giữ nguyên action QrImage hiện tại nhưng bỏ chặn [Authorize(Roles = "Admin")] trên QrImage 
+        // để ảnh QR tải được cho người xem.
+        return View(session);
+    }
+}

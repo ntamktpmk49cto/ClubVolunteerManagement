@@ -193,16 +193,26 @@
             }
 
             
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <div class="mt-3">
-                    <a asp-controller="CheckIn"
-                       asp-action="Create"
-                       class="btn btn-success">
-                        Tạo mã QR điểm danh
+            <div class="mt-4">
+                @if (User.IsInRole("Admin"))
+                {
+                    <!-- Nút dành riêng cho Admin: Tạo phiên điểm danh mới -->
+                    <form asp-controller="CheckIn" asp-action="CreateSession" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="eventId" value="@e.Id" />
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-qr-code"></i> Tạo mã QR điểm danh
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <!-- Nút dành cho Thành viên thường: Bấm vào để hiện mã QR điểm danh -->
+                    <a asp-controller="CheckIn" asp-action="ViewQr" asp-route-eventId="@e.Id" class="btn btn-success">
+                        <i class="bi bi-check2-circle"></i> Điểm danh
                     </a>
-                </div>
-            }
+                }
+            </div>
 
 
             <!-- QUAY LẠI -->

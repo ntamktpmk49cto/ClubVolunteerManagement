@@ -1,0 +1,26 @@
+﻿@model ClubVolunteerManagement.Models.CheckInSession
+@{
+    ViewData["Title"] = "Mã QR điểm danh";
+}
+
+<div class="container mt-5 text-center">
+    <div class="card shadow-sm mx-auto" style="max-width: 450px;">
+        <div class="card-body">
+            <h3 class="card-title">@ViewBag.EventTitle</h3>
+            <p class="text-muted">Quét mã QR bên dưới bằng điện thoại để điểm danh</p>
+
+            <div class="my-4">
+                <img src="@Url.Action("QrImage", "CheckIn", new { sessionId = Model.Id, token = "..." })"
+                     alt="QR Code"
+                     class="img-fluid border p-2"
+                     style="max-width: 250px;" />
+            </div>
+
+            <p class="small text-danger">Phiên điểm danh sẽ hết hạn khi sự kiện kết thúc.</p>
+
+            <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.EventId" class="btn btn-outline-secondary">
+                Quay lại
+            </a>
+        </div>
+    </div>
+</div>

@@ -202,6 +202,9 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.Property<DateTime>("OpenedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("RawToken")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("TokenExpiresAtUtc")
                         .HasColumnType("datetime2");
 
