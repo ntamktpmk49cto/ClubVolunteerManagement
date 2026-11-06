@@ -20,8 +20,10 @@ public class CheckInController : Controller
         _context = context;
     }
 
+
     // Tạo phiên điểm danh.
     // TODO: Giới hạn action này cho đúng vai trò quản lý sự kiện.
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSession(int eventId)
@@ -85,6 +87,7 @@ public class CheckInController : Controller
     }
 
     // Tạo ảnh QR chứa URL điểm danh.
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> QrImage(
         int sessionId,
@@ -119,8 +122,8 @@ public class CheckInController : Controller
         return File(png, "image/png");
     }
 
-    // Mở trang xác nhận sau khi quét QR.
-/*    [HttpGet]
+    // GET: Hiển thị trang xác nhận điểm danh sau khi quét QR.
+    [HttpGet]
     public async Task<IActionResult> Attend(
         int sessionId,
         string token)
@@ -130,19 +133,23 @@ public class CheckInController : Controller
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
         if (!IsSessionValid(session, token))
-            return BadRequest("Mã QR không hợp lệ hoặc đã hết hạn.");
+        {
+            return BadRequest(
+                "Mã QR không hợp lệ hoặc đã hết hạn.");
+        }
 
         ViewBag.SessionId = sessionId;
         ViewBag.Token = token;
         ViewBag.EventTitle = session!.Event.Title;
 
         return View();
-    }*/
+    }
 
-    // Xác nhận điểm danh và cộng giờ trong cùng transaction.
+    // POST: Xác nhận điểm danh và cộng giờ tình nguyện.
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Attend(
+    [ActionName("Attend")]
+    public async Task<IActionResult> AttendConfirm(
         int sessionId,
         string token)
     {
@@ -150,7 +157,9 @@ public class CheckInController : Controller
             ClaimTypes.NameIdentifier);
 
         if (string.IsNullOrEmpty(userId))
+        {
             return Challenge();
+        }
 
         await using var transaction =
             await _context.Database.BeginTransactionAsync();
@@ -160,10 +169,14 @@ public class CheckInController : Controller
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
         if (!IsSessionValid(session, token))
-            return BadRequest("Mã QR không hợp lệ hoặc đã hết hạn.");
+        {
+            return BadRequest(
+                "Mã QR không hợp lệ hoặc đã hết hạn.");
+        }
 
         var eventId = session!.EventId;
 
+        // Kiểm tra người dùng đã đăng ký và được xác nhận.
         var registered = await _context.EventRegistrations
             .AnyAsync(r =>
                 r.EventId == eventId &&
@@ -171,17 +184,23 @@ public class CheckInController : Controller
                 r.Status == RegistrationStatus.Confirmed);
 
         if (!registered)
+        {
             return BadRequest(
                 "Bạn chưa được xác nhận đăng ký sự kiện này.");
-
+        }
+        // Không cho điểm danh trùng sự kiện.
         var alreadyCheckedIn = await _context.Attendances
             .AnyAsync(a =>
                 a.EventId == eventId &&
                 a.UserId == userId);
 
         if (alreadyCheckedIn)
-            return BadRequest("Bạn đã điểm danh sự kiện này rồi.");
+        {
+            return BadRequest(
+                "Bạn đã điểm danh sự kiện này rồi.");
+        }
 
+        // Tạo bản ghi điểm danh.
         var attendance = new Attendance
         {
             EventId = eventId,
@@ -194,12 +213,16 @@ public class CheckInController : Controller
         _context.Attendances.Add(attendance);
         await _context.SaveChangesAsync();
 
-        // Chỉ cộng giờ từ dữ liệu sự kiện trên máy chủ.
+        // Lấy số giờ từ sự kiện trên máy chủ.
         var hours = session.Event.VolunteerHours;
 
         if (hours < 0)
-            return BadRequest("Số giờ tình nguyện không hợp lệ.");
+        {
+            return BadRequest(
+                "Số giờ tình nguyện không hợp lệ.");
+        }
 
+        // Cộng giờ tình nguyện cho lần điểm danh này.
         var volunteerHour = new VolunteerHour
         {
             AttendanceId = attendance.Id,
@@ -212,6 +235,7 @@ public class CheckInController : Controller
         _context.VolunteerHours.Add(volunteerHour);
         await _context.SaveChangesAsync();
 
+        // Chỉ xác nhận khi cả điểm danh và giờ đều lưu thành công.
         await transaction.CommitAsync();
 
         return Content(
@@ -225,6 +249,7 @@ public class CheckInController : Controller
     }
 
     // Đóng phiên điểm danh.
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CloseSession(int sessionId)
@@ -269,15 +294,42 @@ public class CheckInController : Controller
     }
 
     private static bool IsSessionValid(
-        CheckInSession? session,
-        string token)
+    CheckInSession? session,
+    string token)
     {
         return session != null &&
-            session.IsOpen &&
-            session.ClosedAtUtc == null &&
-            session.TokenExpiresAtUtc.HasValue &&
-            session.TokenExpiresAtUtc.Value > DateTime.UtcNow &&
-            !string.IsNullOrWhiteSpace(session.TokenHash) &&
-            TokenMatches(token, session.TokenHash);
+               session.IsOpen &&
+               session.ClosedAtUtc == null &&
+               session.TokenExpiresAtUtc.HasValue &&
+               session.TokenExpiresAtUtc.Value > DateTime.UtcNow &&
+               !string.IsNullOrWhiteSpace(session.TokenHash) &&
+               TokenMatches(token, session.TokenHash);
+    }
+
+    // GET: Xem thông tin phiên điểm danh.
+    [HttpGet]
+    public async Task<IActionResult> ViewQr(int eventId)
+    {
+        var session = await _context.CheckInSessions
+            .Include(s => s.Event)
+            .FirstOrDefaultAsync(s =>
+                s.EventId == eventId && s.IsOpen);
+
+        if (session == null ||
+            session.ClosedAtUtc != null ||
+            !session.TokenExpiresAtUtc.HasValue ||
+            session.TokenExpiresAtUtc.Value <= DateTime.UtcNow)
+        {
+            TempData["Error"] =
+                "Sự kiện hiện chưa mở phiên điểm danh hoặc phiên đã hết hạn.";
+
+            return RedirectToAction(
+                "Details", "Events", new { id = eventId });
+        }
+
+        ViewBag.SessionId = session.Id;
+        ViewBag.EventTitle = session.Event.Title;
+
+        return View(session);
     }
 }
