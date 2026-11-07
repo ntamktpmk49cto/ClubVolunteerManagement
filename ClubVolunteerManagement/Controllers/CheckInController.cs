@@ -21,12 +21,20 @@ public class CheckInController : Controller
         _context = context;
     }
 
+<<<<<<< Updated upstream
     // 1. TẠO PHIÊN ĐIỂM DANH: Admin toàn hệ thống, Ban chủ nhiệm chỉ được tạo cho sự kiện CLB mình
     [Authorize(Roles = "Admin,ClubManager")]
+=======
+    // 1. TẠO PHIÊN ĐIỂM DANH: Quản lý CLB và Admin
+>>>>>>> Stashed changes
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSession(int eventId)
     {
+<<<<<<< Updated upstream
+=======
+        // Kiểm tra quyền (Ban chủ nhiệm hoặc Admin)
+>>>>>>> Stashed changes
         if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
             return Forbid();
 
@@ -40,7 +48,6 @@ public class CheckInController : Controller
             return RedirectToAction("Details", "Events", new { id = eventId });
         }
 
-        // Kiểm tra xem sự kiện đã có phiên nào đang mở chưa
         var existingSession = await _context.CheckInSessions
             .FirstOrDefaultAsync(s => s.EventId == eventId && s.IsOpen);
 
@@ -172,7 +179,6 @@ public class CheckInController : Controller
             .Include(s => s.Event)
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
-        // 1. Kiểm tra tính hợp lệ của phiên QR
         if (!IsSessionValid(session, token))
         {
             return BadRequest("Mã QR không hợp lệ hoặc đã hết hạn.");
@@ -180,7 +186,6 @@ public class CheckInController : Controller
 
         var eventId = session!.EventId;
 
-        // 2. Kiểm tra sinh viên có trong danh sách duyệt tham gia không
         var registered = await _context.EventRegistrations
             .AnyAsync(r => r.EventId == eventId &&
                            r.UserId == userId &&
@@ -191,7 +196,6 @@ public class CheckInController : Controller
             return BadRequest("Bạn chưa được duyệt đăng ký tham gia sự kiện này.");
         }
 
-        // 3. Ngăn chặn quét mã nhiều lần (Không được cộng giờ nhiều lần)
         var alreadyCheckedIn = await _context.Attendances
             .AnyAsync(a => a.EventId == eventId && a.UserId == userId);
 
@@ -200,7 +204,6 @@ public class CheckInController : Controller
             return BadRequest("Bạn đã điểm danh sự kiện này rồi, không thể điểm danh lại.");
         }
 
-        // 4. Tạo bản ghi điểm danh
         var attendance = new Attendance
         {
             EventId = eventId,
@@ -213,7 +216,6 @@ public class CheckInController : Controller
         _context.Attendances.Add(attendance);
         await _context.SaveChangesAsync();
 
-        // 5. Chỉ cộng giờ tình nguyện sau khi điểm danh hợp lệ và sự kiện có giờ tình nguyện
         var hours = session.Event.VolunteerHours;
         if (hours > 0 && session.Event.Type == EventType.Volunteer)
         {
@@ -236,8 +238,12 @@ public class CheckInController : Controller
         return RedirectToAction("Details", "Events", new { id = eventId });
     }
 
+<<<<<<< Updated upstream
     // 6. ĐÓNG PHIÊN ĐIỂM DANH: Phân quyền Admin & Ban chủ nhiệm CLB
     [Authorize(Roles = "Admin,ClubManager")]
+=======
+    // 6. ĐÓNG PHIÊN ĐIỂM DANH
+>>>>>>> Stashed changes
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CloseSession(int sessionId)
