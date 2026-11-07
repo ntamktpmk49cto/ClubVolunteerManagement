@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
+using ClubVolunteerManagement.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,37 +21,43 @@ public class CheckInController : Controller
         _context = context;
     }
 
-
-    // Tạo phiên điểm danh.
-    // TODO: Giới hạn action này cho đúng vai trò quản lý sự kiện.
-    [Authorize(Roles = "Admin")]
+    // 1. TẠO PHIÊN ĐIỂM DANH: Admin toàn hệ thống, Ban chủ nhiệm chỉ được tạo cho sự kiện CLB mình
+    [Authorize(Roles = "Admin,ClubManager")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSession(int eventId)
     {
-        var eventItem = await _context.Events
-            .FirstOrDefaultAsync(e => e.Id == eventId);
+        if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
+            return Forbid();
 
+        var eventItem = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
         if (eventItem == null)
             return NotFound("Không tìm thấy sự kiện.");
 
-        var now = DateTime.UtcNow;
+        if (eventItem.Status != EventStatus.Published && eventItem.Status != EventStatus.InProgress)
+        {
+            TempData["Error"] = "Chỉ có thể tạo phiên điểm danh cho sự kiện đã công bố hoặc đang diễn ra.";
+            return RedirectToAction("Details", "Events", new { id = eventId });
+        }
 
+        // Kiểm tra xem sự kiện đã có phiên nào đang mở chưa
         var existingSession = await _context.CheckInSessions
-            .AnyAsync(s => s.EventId == eventId && s.IsOpen);
+            .FirstOrDefaultAsync(s => s.EventId == eventId && s.IsOpen);
 
-        if (existingSession)
-            return BadRequest("Sự kiện đã có phiên điểm danh đang mở.");
+        if (existingSession != null)
+        {
+            return RedirectToAction(nameof(ViewQr), new { eventId = existingSession.EventId });
+        }
 
-        // Token ngẫu nhiên; cơ sở dữ liệu chỉ lưu bản băm.
-        var token = Convert.ToHexString(
-            RandomNumberGenerator.GetBytes(32));
+        var now = DateTime.UtcNow;
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
         var session = new CheckInSession
         {
             EventId = eventId,
             OpenedAtUtc = now,
             IsOpen = true,
+            RawToken = token,
             TokenHash = HashToken(token),
             TokenExpiresAtUtc = eventItem.EndAtUtc
         };
@@ -58,40 +65,47 @@ public class CheckInController : Controller
         _context.CheckInSessions.Add(session);
         await _context.SaveChangesAsync();
 
+        return RedirectToAction(nameof(ViewQr), new { eventId = session.EventId });
+    }
+
+    // 2. XEM LẠI MÃ QR
+    [AllowAnonymous]
+    [HttpGet]
+    public async Task<IActionResult> ViewQr(int eventId)
+    {
+        var session = await _context.CheckInSessions
+            .Include(s => s.Event)
+            .FirstOrDefaultAsync(s => s.EventId == eventId && s.IsOpen);
+
+        if (session == null ||
+            session.ClosedAtUtc != null ||
+            !session.TokenExpiresAtUtc.HasValue ||
+            session.TokenExpiresAtUtc.Value <= DateTime.UtcNow ||
+            string.IsNullOrEmpty(session.RawToken))
+        {
+            TempData["Error"] = "Sự kiện hiện chưa mở phiên điểm danh hoặc phiên đã hết hạn.";
+            return RedirectToAction("Details", "Events", new { id = eventId });
+        }
+
         var checkInUrl = Url.Action(
             nameof(Attend),
             "CheckIn",
-            new { sessionId = session.Id, token },
+            new { sessionId = session.Id, token = session.RawToken },
             Request.Scheme);
 
-        // Hiển thị QR trực tiếp để người quản lý kiểm thử.
-        var html = $"""
-            <!DOCTYPE html>
-            <html lang="vi">
-            <head>
-                <meta charset="utf-8">
-                <title>Mã QR điểm danh</title>
-            </head>
-            <body style="font-family:Arial;text-align:center;padding:30px">
-                <h2>{System.Net.WebUtility.HtmlEncode(eventItem.Title)}</h2>
-                <p>Quét mã QR để mở trang điểm danh.</p>
-                <img src="/CheckIn/QrImage?sessionId={session.Id}&amp;token={Uri.EscapeDataString(token)}"
-                     alt="Mã QR điểm danh" />
-                <p>Phiên điểm danh sẽ hết hạn khi sự kiện kết thúc.</p>
-                <p><a href="{System.Net.WebUtility.HtmlEncode(checkInUrl ?? "#")}">Mở trang điểm danh</a></p>
-            </body>
-            </html>
-            """;
+        ViewBag.SessionId = session.Id;
+        ViewBag.Token = session.RawToken;
+        ViewBag.EventTitle = session.Event.Title;
+        ViewBag.CheckInUrl = checkInUrl;
+        ViewBag.ExpiresAt = session.TokenExpiresAtUtc.Value.AddHours(7).ToString("HH:mm - dd/MM/yyyy");
 
-        return Content(html, "text/html; charset=utf-8");
+        return View(session);
     }
 
-    // Tạo ảnh QR chứa URL điểm danh.
+    // 3. TẠO HÌNH ẢNH MÃ QR
     [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> QrImage(
-        int sessionId,
-        string token)
+    public async Task<IActionResult> QrImage(int sessionId, string token)
     {
         var session = await _context.CheckInSessions
             .FirstOrDefaultAsync(s => s.Id == sessionId);
@@ -112,21 +126,17 @@ public class CheckInController : Controller
             Request.Scheme);
 
         using var generator = new QRCodeGenerator();
-        using var data = generator.CreateQrCode(
-            url!,
-            QRCodeGenerator.ECCLevel.Q);
-
+        using var data = generator.CreateQrCode(url!, QRCodeGenerator.ECCLevel.Q);
         var qr = new PngByteQRCode(data);
         var png = qr.GetGraphic(10);
 
         return File(png, "image/png");
     }
 
-    // GET: Hiển thị trang xác nhận điểm danh sau khi quét QR.
+    // 4. MÀN HÌNH QUÉT MÃ ĐIỂM DANH
+    [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> Attend(
-        int sessionId,
-        string token)
+    public async Task<IActionResult> Attend(int sessionId, string token)
     {
         var session = await _context.CheckInSessions
             .Include(s => s.Event)
@@ -134,8 +144,7 @@ public class CheckInController : Controller
 
         if (!IsSessionValid(session, token))
         {
-            return BadRequest(
-                "Mã QR không hợp lệ hoặc đã hết hạn.");
+            return BadRequest("Mã QR không hợp lệ hoặc đã hết hạn.");
         }
 
         ViewBag.SessionId = sessionId;
@@ -145,62 +154,53 @@ public class CheckInController : Controller
         return View();
     }
 
-    // POST: Xác nhận điểm danh và cộng giờ tình nguyện.
+    // 5. XÁC NHẬN ĐIỂM DANH & CỘNG GIỜ TÌNH NGUYỆN
     [HttpPost]
     [ValidateAntiForgeryToken]
     [ActionName("Attend")]
-    public async Task<IActionResult> AttendConfirm(
-        int sessionId,
-        string token)
+    public async Task<IActionResult> AttendConfirm(int sessionId, string token)
     {
-        var userId = User.FindFirstValue(
-            ClaimTypes.NameIdentifier);
-
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userId))
         {
             return Challenge();
         }
 
-        await using var transaction =
-            await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _context.Database.BeginTransactionAsync();
 
         var session = await _context.CheckInSessions
             .Include(s => s.Event)
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
+        // 1. Kiểm tra tính hợp lệ của phiên QR
         if (!IsSessionValid(session, token))
         {
-            return BadRequest(
-                "Mã QR không hợp lệ hoặc đã hết hạn.");
+            return BadRequest("Mã QR không hợp lệ hoặc đã hết hạn.");
         }
 
         var eventId = session!.EventId;
 
-        // Kiểm tra người dùng đã đăng ký và được xác nhận.
+        // 2. Kiểm tra sinh viên có trong danh sách duyệt tham gia không
         var registered = await _context.EventRegistrations
-            .AnyAsync(r =>
-                r.EventId == eventId &&
-                r.UserId == userId &&
-                r.Status == RegistrationStatus.Confirmed);
+            .AnyAsync(r => r.EventId == eventId &&
+                           r.UserId == userId &&
+                           r.Status == RegistrationStatus.Confirmed);
 
         if (!registered)
         {
-            return BadRequest(
-                "Bạn chưa được xác nhận đăng ký sự kiện này.");
+            return BadRequest("Bạn chưa được duyệt đăng ký tham gia sự kiện này.");
         }
-        // Không cho điểm danh trùng sự kiện.
+
+        // 3. Ngăn chặn quét mã nhiều lần (Không được cộng giờ nhiều lần)
         var alreadyCheckedIn = await _context.Attendances
-            .AnyAsync(a =>
-                a.EventId == eventId &&
-                a.UserId == userId);
+            .AnyAsync(a => a.EventId == eventId && a.UserId == userId);
 
         if (alreadyCheckedIn)
         {
-            return BadRequest(
-                "Bạn đã điểm danh sự kiện này rồi.");
+            return BadRequest("Bạn đã điểm danh sự kiện này rồi, không thể điểm danh lại.");
         }
 
-        // Tạo bản ghi điểm danh.
+        // 4. Tạo bản ghi điểm danh
         var attendance = new Attendance
         {
             EventId = eventId,
@@ -213,70 +213,59 @@ public class CheckInController : Controller
         _context.Attendances.Add(attendance);
         await _context.SaveChangesAsync();
 
-        // Lấy số giờ từ sự kiện trên máy chủ.
+        // 5. Chỉ cộng giờ tình nguyện sau khi điểm danh hợp lệ và sự kiện có giờ tình nguyện
         var hours = session.Event.VolunteerHours;
-
-        if (hours < 0)
+        if (hours > 0 && session.Event.Type == EventType.Volunteer)
         {
-            return BadRequest(
-                "Số giờ tình nguyện không hợp lệ.");
+            var volunteerHour = new VolunteerHour
+            {
+                AttendanceId = attendance.Id,
+                UserId = userId,
+                EventId = eventId,
+                Hours = hours,
+                GrantedAtUtc = DateTime.UtcNow
+            };
+
+            _context.VolunteerHours.Add(volunteerHour);
+            await _context.SaveChangesAsync();
         }
 
-        // Cộng giờ tình nguyện cho lần điểm danh này.
-        var volunteerHour = new VolunteerHour
-        {
-            AttendanceId = attendance.Id,
-            UserId = userId,
-            EventId = eventId,
-            Hours = hours,
-            GrantedAtUtc = DateTime.UtcNow
-        };
-
-        _context.VolunteerHours.Add(volunteerHour);
-        await _context.SaveChangesAsync();
-
-        // Chỉ xác nhận khi cả điểm danh và giờ đều lưu thành công.
         await transaction.CommitAsync();
 
-        return Content(
-            $"Điểm danh thành công! Bạn được ghi nhận {hours} giờ tình nguyện.");
+        TempData["Success"] = $"Điểm danh thành công! Bạn được cộng {hours} giờ tình nguyện.";
+        return RedirectToAction("Details", "Events", new { id = eventId });
     }
 
-    [HttpGet]
-    public IActionResult Create()
-    {
-        return View();
-    }
-
-    // Đóng phiên điểm danh.
-    [Authorize(Roles = "Admin")]
+    // 6. ĐÓNG PHIÊN ĐIỂM DANH: Phân quyền Admin & Ban chủ nhiệm CLB
+    [Authorize(Roles = "Admin,ClubManager")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CloseSession(int sessionId)
     {
         var session = await _context.CheckInSessions
+            .Include(s => s.Event)
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
         if (session == null)
             return NotFound();
 
+        if (!await AuthorizationHelper.CanManageEventAsync(_context, User, session.EventId))
+            return Forbid();
+
         session.IsOpen = false;
         session.ClosedAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-
-        return Content("Đã đóng phiên điểm danh.");
+        TempData["Success"] = "Đã đóng phiên điểm danh.";
+        return RedirectToAction("Details", "Events", new { id = session.EventId });
     }
 
     private static string HashToken(string token)
     {
-        return Convert.ToHexString(
-            SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
     }
 
-    private static bool TokenMatches(
-        string token,
-        string expectedHash)
+    private static bool TokenMatches(string token, string expectedHash)
     {
         try
         {
@@ -284,8 +273,7 @@ public class CheckInController : Controller
             var expected = Convert.FromHexString(expectedHash);
 
             return actual.Length == expected.Length &&
-                CryptographicOperations.FixedTimeEquals(
-                    actual, expected);
+                   CryptographicOperations.FixedTimeEquals(actual, expected);
         }
         catch (FormatException)
         {
@@ -293,9 +281,7 @@ public class CheckInController : Controller
         }
     }
 
-    private static bool IsSessionValid(
-    CheckInSession? session,
-    string token)
+    private static bool IsSessionValid(CheckInSession? session, string token)
     {
         return session != null &&
                session.IsOpen &&
@@ -304,32 +290,5 @@ public class CheckInController : Controller
                session.TokenExpiresAtUtc.Value > DateTime.UtcNow &&
                !string.IsNullOrWhiteSpace(session.TokenHash) &&
                TokenMatches(token, session.TokenHash);
-    }
-
-    // GET: Xem thông tin phiên điểm danh.
-    [HttpGet]
-    public async Task<IActionResult> ViewQr(int eventId)
-    {
-        var session = await _context.CheckInSessions
-            .Include(s => s.Event)
-            .FirstOrDefaultAsync(s =>
-                s.EventId == eventId && s.IsOpen);
-
-        if (session == null ||
-            session.ClosedAtUtc != null ||
-            !session.TokenExpiresAtUtc.HasValue ||
-            session.TokenExpiresAtUtc.Value <= DateTime.UtcNow)
-        {
-            TempData["Error"] =
-                "Sự kiện hiện chưa mở phiên điểm danh hoặc phiên đã hết hạn.";
-
-            return RedirectToAction(
-                "Details", "Events", new { id = eventId });
-        }
-
-        ViewBag.SessionId = session.Id;
-        ViewBag.EventTitle = session.Event.Title;
-
-        return View(session);
     }
 }

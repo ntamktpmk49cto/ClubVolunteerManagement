@@ -1,22 +1,32 @@
-﻿@model ClubVolunteerManagement.Models.Club
+﻿@model ClubVolunteerManagement.ViewModels.EventDetailsViewModel
 @using ClubVolunteerManagement.Models
 
 @{
-    ViewData["Title"] = "Chi tiết câu lạc bộ";
+    ViewData["Title"] = "Chi tiết sự kiện";
 
-    ClubMemberStatus? status =
-        ViewData["MembershipStatus"] is ClubMemberStatus value
-            ? value
-            : null;
+    var e = Model.Event;
 
-    bool canManage =
-        ViewData["CanManageMembers"] is true;
+    // Kiểm tra sự kiện có đang mở đăng ký không.
+    bool registrationOpen =
+        e.Status == EventStatus.Published &&
+        DateTime.UtcNow < e.RegistrationDeadlineUtc &&
+        DateTime.UtcNow < e.StartAtUtc;
+
+    // Kiểm tra người dùng đã đăng ký chưa.
+    bool registered =
+        Model.MyRegistrationStatus == RegistrationStatus.Confirmed ||
+        Model.MyRegistrationStatus == RegistrationStatus.Waitlisted;
+
+    // Kiểm tra quyền quản lý điểm danh
+    bool canManageCheckIn = User.IsInRole("Admin") || User.IsInRole("ClubManager");
 }
 
-<div class="container mt-4">
+<div class="container mt-4 mb-5">
 
-    <h2>Chi tiết câu lạc bộ</h2>
+    <!-- TÊN SỰ KIỆN -->
+    <h2 class="mb-4">@e.Title</h2>
 
+    <!-- THÔNG BÁO -->
     @if (TempData["Success"] != null)
     {
         <div class="alert alert-success">
@@ -32,36 +42,103 @@
     }
 
     <div class="card shadow-sm mt-3">
-
         <div class="card-body">
 
-            <h3 class="card-title">@Model.Name</h3>
+            <!-- THÔNG TIN CHUNG -->
+            <h5 class="mb-3">Thông tin sự kiện</h5>
 
             <p>
-                <strong>Mã CLB:</strong>
-                @Model.Id
+                <strong>CLB tổ chức:</strong>
+                @e.Club.Name
+            </p>
+
+            <p>
+                <strong>Địa điểm:</strong>
+                @e.Location
+            </p>
+
+            <p>
+                <strong>Loại sự kiện:</strong>
+                @e.Type
+            </p>
+
+            <p>
+                <strong>Trạng thái:</strong>
+                @if (e.Status == EventStatus.Published)
+                {
+                    <span class="badge bg-success">Đã công bố</span>
+                }
+                else if (e.Status == EventStatus.Draft)
+                {
+                    <span class="badge bg-secondary">Bản nháp</span>
+                }
+                else if (e.Status == EventStatus.PendingApproval)
+                {
+                    <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                }
+                else if (e.Status == EventStatus.Completed)
+                {
+                    <span class="badge bg-info text-dark">Đã kết thúc</span>
+                }
+                else if (e.Status == EventStatus.Cancelled)
+                {
+                    <span class="badge bg-danger">Đã hủy</span>
+                }
+                else
+                {
+                    <span class="badge bg-primary">@e.Status</span>
+                }
+            </p>
+
+            <hr />
+
+            <!-- THỜI GIAN SỰ KIỆN -->
+            <h5 class="mb-3">Thời gian tổ chức</h5>
+
+            <p>
+                <strong>Bắt đầu:</strong>
+                @(e.StartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+            </p>
+
+            <p>
+                <strong>Kết thúc:</strong>
+                @(e.EndAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+            </p>
+
+            <p>
+                <strong>Hạn đăng ký:</strong>
+                @(e.RegistrationDeadlineUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+            </p>
+
+            <hr />
+
+            <!-- THÔNG TIN THAM GIA -->
+            <h5 class="mb-3">Thông tin tham gia</h5>
+
+            <p>
+                <strong>Số lượng đã đăng ký:</strong>
+                @Model.ConfirmedCount / @e.Capacity
+            </p>
+
+            <p>
+                <strong>Giờ tình nguyện:</strong>
+                @(e.VolunteerHours.ToString("0.##")) giờ
             </p>
 
             <p>
                 <strong>Mô tả:</strong>
-                @Model.Description
             </p>
 
-            @if (!string.IsNullOrEmpty(Model.LogoUrl))
-            {
-                <img src="@Model.LogoUrl"
-                     alt="Logo CLB"
-                     style="max-width:150px"
-                     class="mb-3" />
-            }
-
             <p>
-                <strong>Ngày tạo:</strong>
-                @Model.CreatedAtUtc.ToString("dd/MM/yyyy")
-                (UTC)
+                @(string.IsNullOrWhiteSpace(e.Description)
+                    ? "Chưa có mô tả."
+                    : e.Description)
             </p>
 
             <hr />
+
+            <!-- CHỨC NĂNG ĐĂNG KÝ SỰ KIỆN -->
+            <h5 class="mb-3">Đăng ký tham gia</h5>
 
             @if (User.Identity?.IsAuthenticated != true)
             {
@@ -69,120 +146,95 @@
                    asp-page="/Account/Login"
                    asp-route-returnUrl="@Context.Request.Path"
                    class="btn btn-primary">
-                    Đăng nhập để tham gia CLB
+                    Đăng nhập để đăng ký
                 </a>
             }
-            else if (!User.IsInRole("Admin"))
+            else
             {
-                if (status == null ||
-                status == ClubMemberStatus.Rejected)
-                {
-                    <form asp-controller="ClubMembers"
-                          asp-action="Join"
-                          method="post"
-                          asp-antiforgery="true">
-
-                        <input type="hidden"
-                               name="clubId"
-                               value="@Model.Id" />
-
-                        <button type="submit"
-                                class="btn btn-success">
-                            Tham gia CLB
-                        </button>
-                    </form>
-                }
-
-                else if (status == ClubMemberStatus.Pending)
-                {
-                    <div class="alert alert-warning">
-                        Yêu cầu tham gia đang chờ duyệt.
-                    </div>
-
-                    <form asp-controller="ClubMembers"
-                          asp-action="Leave"
-                          method="post"
-                          onsubmit="return confirm('Hủy yêu cầu tham gia CLB?')">
-
-                        @Html.AntiForgeryToken()
-
-                        <input type="hidden"
-                               name="clubId"
-                               value="@Model.Id" />
-
-                        <button type="submit"
-                                class="btn btn-outline-danger">
-                            Hủy yêu cầu
-                        </button>
-                    </form>
-                }
-                else if (status == ClubMemberStatus.Approved)
+                if (Model.MyRegistrationStatus == RegistrationStatus.Confirmed)
                 {
                     <div class="alert alert-success">
-                        Bạn đã là thành viên của CLB này.
+                        Bạn đã đăng ký tham gia sự kiện thành công.
                     </div>
-
-                    @if (!canManage)
-                    {
-                        <form asp-controller="ClubMembers"
-                              asp-action="Leave"
-                              method="post"
-                              onsubmit="return confirm('Bạn chắc chắn muốn rời CLB?')">
-
-                            @Html.AntiForgeryToken()
-
-                            <input type="hidden"
-                                   name="clubId"
-                                   value="@Model.Id" />
-
-                            <button type="submit"
-                                    class="btn btn-outline-danger">
-                                Rời CLB
-                            </button>
-                        </form>
-                    }
                 }
 
+                if (Model.MyRegistrationStatus == RegistrationStatus.Waitlisted)
+                {
+                    <div class="alert alert-warning">
+                        Sự kiện đã đủ chỗ. Bạn đang ở trong danh sách chờ.
+                    </div>
+                }
+
+                if (registrationOpen && !registered)
+                {
+                    <form asp-controller="EventRegistrations"
+                          asp-action="Register"
+                          method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="eventId" value="@e.Id" />
+                        <button type="submit" class="btn btn-primary">
+                            Đăng ký tham gia
+                        </button>
+                    </form>
+                }
+
+                if (registrationOpen && registered)
+                {
+                    <form asp-controller="EventRegistrations"
+                          asp-action="Cancel"
+                          method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="eventId" value="@e.Id" />
+                        <button type="submit"
+                                class="btn btn-danger"
+                                onclick="return confirm('Bạn chắc chắn muốn hủy đăng ký sự kiện này?')">
+                            Hủy đăng ký
+                        </button>
+                    </form>
+                }
+
+                if (!registrationOpen)
+                {
+                    <div class="alert alert-secondary">
+                        Sự kiện hiện không mở đăng ký.
+                    </div>
+                }
             }
 
-            <div class="mt-3 d-flex gap-2 flex-wrap">
+            <!-- CHỨC NĂNG ĐIỂM DANH QR -->
+            @if (e.Status == EventStatus.Published && canManageCheckIn)
+            {
+                <hr />
+                <h5 class="mb-3">Quản lý điểm danh</h5>
 
+                <div class="d-flex gap-2 align-items-center">
+                    <form asp-controller="CheckIn"
+                          asp-action="CreateSession"
+                          method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="eventId" value="@e.Id" />
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-qr-code"></i> Mở phiên / Tạo mã QR
+                        </button>
+                    </form>
 
-                @if (canManage)
-                {
-                    <a asp-controller="ClubMembers"
-                       asp-action="Pending"
-                       asp-route-clubId="@Model.Id"
-                       class="btn btn-primary">
-                        Duyệt thành viên
+                    <a asp-controller="CheckIn"
+                       asp-action="ViewQr"
+                       asp-route-eventId="@e.Id"
+                       target="_blank"
+                       class="btn btn-outline-primary">
+                        Xem lại mã QR
                     </a>
+                </div>
+            }
 
-                    <a asp-controller="ClubMembers"
-                       asp-action="Members"
-                       asp-route-clubId="@Model.Id"
-                       class="btn btn-info text-white">
-                        Danh sách thành viên
-                    </a>
-                }
+            <hr />
 
-
-                @if (User.IsInRole("Admin"))
-                {
-                    <a asp-action="Edit"
-                       asp-route-id="@Model.Id"
-                       class="btn btn-warning">
-                        Chỉnh sửa CLB
-                    </a>
-                }
-
-                <a asp-action="Index"
-                   class="btn btn-secondary">
-                    Quay lại
-                </a>
-
-            </div>
-
+            <a asp-controller="Events"
+               asp-action="Index"
+               class="btn btn-secondary mt-2">
+                Quay lại danh sách
+            </a>
         </div>
     </div>
-
 </div>

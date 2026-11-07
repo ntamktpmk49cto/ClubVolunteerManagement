@@ -135,7 +135,7 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.HasIndex("EventId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("Attendances");
+                    b.ToTable("Attendances", (string)null);
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.Certificate", b =>
@@ -179,7 +179,7 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.HasIndex("VerificationCode")
                         .IsUnique();
 
-                    b.ToTable("Certificates");
+                    b.ToTable("Certificates", (string)null);
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.CheckInSession", b =>
@@ -202,9 +202,6 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.Property<DateTime>("OpenedAtUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("RawToken")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime?>("TokenExpiresAtUtc")
                         .HasColumnType("datetime2");
 
@@ -215,7 +212,7 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasIndex("EventId");
 
-                    b.ToTable("CheckInSessions");
+                    b.ToTable("CheckInSessions", (string)null);
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.Club", b =>
@@ -244,7 +241,7 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Clubs");
+                    b.ToTable("Clubs", (string)null);
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.ClubMember", b =>
@@ -278,7 +275,7 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.HasIndex("ClubId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("ClubMembers");
+                    b.ToTable("ClubMembers", (string)null);
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.Event", b =>
@@ -335,7 +332,7 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasIndex("ClubId");
 
-                    b.ToTable("Events");
+                    b.ToTable("Events", (string)null);
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.EventRegistration", b =>
@@ -368,7 +365,7 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasIndex("EventId", "Status", "RegisteredAtUtc");
 
-                    b.ToTable("EventRegistrations");
+                    b.ToTable("EventRegistrations", (string)null);
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.VolunteerHour", b =>
@@ -405,7 +402,7 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("VolunteerHours");
+                    b.ToTable("VolunteerHours", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
