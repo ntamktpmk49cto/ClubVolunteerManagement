@@ -12,38 +12,25 @@
         DateTime.UtcNow < e.RegistrationDeadlineUtc &&
         DateTime.UtcNow < e.StartAtUtc;
 
-    // Kiểm tra sinh viên đã đăng ký chính thức hoặc đang ở danh sách chờ chưa
+    // Kiểm tra người dùng đã đăng ký (Chính thức hoặc Danh sách chờ) chưa
     bool registered =
         Model.MyRegistrationStatus == RegistrationStatus.Confirmed ||
         Model.MyRegistrationStatus == RegistrationStatus.Waitlisted;
 
-    // Kiểm tra sự kiện đã đủ chỗ chính thức chưa
+    // Kiểm tra sự kiện đã đủ chỗ chưa
     bool isFull = Model.ConfirmedCount >= e.Capacity;
 }
 
-<div class="container mt-4">
+<div class="container mt-4 mb-5">
 
     <!-- TÊN SỰ KIỆN -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0 fw-bold">@e.Title</h2>
-        <a asp-controller="Events" asp-action="Index" class="btn btn-outline-secondary">
-            Quay lại danh sách
-        </a>
-    </div>
+    <h2 class="mb-4 fw-bold text-primary">@e.Title</h2>
 
-    <!-- THÔNG BÁO TEMP DATA -->
+    <!-- THÔNG BÁO -->
     @if (TempData["Success"] != null)
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             @TempData["Success"]
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
-
-    @if (TempData["Warning"] != null)
-    {
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            @TempData["Warning"]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
@@ -56,65 +43,103 @@
         </div>
     }
 
-    <div class="card shadow-sm border-0">
+    <div class="card shadow-sm border-0 mt-3">
         <div class="card-body p-4">
 
-            <div class="row g-3 mb-3">
-                <div class="col-md-6">
-                    <p class="mb-2">
-                        <strong>CLB tổ chức:</strong>
-                        @e.Club?.Name
-                    </p>
-                    <p class="mb-2">
-                        <strong>Địa điểm:</strong>
-                        @e.Location
-                    </p>
-                    <p class="mb-2">
-                        <strong>Loại sự kiện:</strong>
-                        @e.Type
-                    </p>
-                    <p class="mb-2">
-                        <strong>Trạng thái:</strong>
-                        <span class="badge bg-info text-dark">@e.Status</span>
-                    </p>
-                </div>
-                <div class="col-md-6">
-                    <p class="mb-2">
-                        <strong>Bắt đầu:</strong>
-                        @(e.StartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
-                    </p>
-                    <p class="mb-2">
-                        <strong>Kết thúc:</strong>
-                        @(e.EndAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
-                    </p>
-                    <p class="mb-2">
-                        <strong>Hạn đăng ký:</strong>
-                        @(e.RegistrationDeadlineUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
-                    </p>
-                    <p class="mb-2">
-                        <strong>Số lượng đăng ký:</strong>
-                        <span class="badge bg-primary">@Model.ConfirmedCount / @e.Capacity</span>
-                    </p>
-                    <p class="mb-2">
-                        <strong>Giờ tình nguyện:</strong>
-                        @(e.VolunteerHours.ToString("0.##")) giờ
-                    </p>
-                </div>
-            </div>
+            <!-- THÔNG TIN CHUNG -->
+            <h5 class="mb-3 fw-bold">Thông tin sự kiện</h5>
+
+            <p class="mb-2">
+                <strong>CLB tổ chức:</strong>
+                @e.Club?.Name
+            </p>
+
+            <p class="mb-2">
+                <strong>Địa điểm:</strong>
+                @e.Location
+            </p>
+
+            <p class="mb-2">
+                <strong>Loại sự kiện:</strong>
+                @e.Type
+            </p>
+
+            <p class="mb-2">
+                <strong>Trạng thái:</strong>
+                @if (e.Status == EventStatus.Published)
+                {
+                    <span class="badge bg-success">Đã công bố</span>
+                }
+                else if (e.Status == EventStatus.Draft)
+                {
+                    <span class="badge bg-secondary">Bản nháp</span>
+                }
+                else if (e.Status == EventStatus.PendingApproval)
+                {
+                    <span class="badge bg-warning text-dark">Chờ duyệt</span>
+                }
+                else if (e.Status == EventStatus.Completed)
+                {
+                    <span class="badge bg-info text-dark">Đã kết thúc</span>
+                }
+                else if (e.Status == EventStatus.Cancelled)
+                {
+                    <span class="badge bg-danger">Đã hủy</span>
+                }
+                else
+                {
+                    <span class="badge bg-primary">@e.Status</span>
+                }
+            </p>
 
             <hr />
 
-            <!-- MÔ TẢ -->
-            <div class="mb-4">
-                <h5 class="fw-bold mb-2">Mô tả sự kiện:</h5>
-                <p class="text-secondary mb-0">
-                    @(string.IsNullOrWhiteSpace(e.Description) ? "Chưa có mô tả." : e.Description)
-                </p>
-            </div>
+            <!-- THỜI GIAN SỰ KIỆN -->
+            <h5 class="mb-3 fw-bold">Thời gian tổ chức</h5>
+
+            <p class="mb-2">
+                <strong>Bắt đầu:</strong>
+                @(e.StartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+            </p>
+
+            <p class="mb-2">
+                <strong>Kết thúc:</strong>
+                @(e.EndAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+            </p>
+
+            <p class="mb-2">
+                <strong>Hạn đăng ký:</strong>
+                @(e.RegistrationDeadlineUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+            </p>
 
             <hr />
 
-            <!-- CHỨC NĂNG ĐĂNG KÝ THAM GIA / HỦY / DANH SÁCH CHỜ -->
+            <!-- THÔNG TIN THAM GIA -->
+            <h5 class="mb-3 fw-bold">Thông tin tham gia</h5>
+
+            <p class="mb-2">
+                <strong>Số lượng đã đăng ký:</strong>
+                <span class="badge bg-primary">@Model.ConfirmedCount / @e.Capacity</span>
+            </p>
+
+            <p class="mb-2">
+                <strong>Giờ tình nguyện:</strong>
+                @(e.VolunteerHours.ToString("0.##")) giờ
+            </p>
+
+            <p class="mb-2">
+                <strong>Mô tả:</strong>
+            </p>
+
+            <p class="text-secondary">
+                @(string.IsNullOrWhiteSpace(e.Description) ? "Chưa có mô tả." : e.Description)
+            </p>
+
+            <hr />
+
+            <!-- CHỨC NĂNG ĐĂNG KÝ SỰ KIỆN -->
+            <h5 class="mb-3 fw-bold">Đăng ký tham gia</h5>
+
             @if (User.Identity?.IsAuthenticated != true)
             {
                 <a asp-area="Identity"
@@ -135,7 +160,7 @@
                             <form asp-controller="EventRegistrations" asp-action="Cancel" method="post" class="m-0">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="eventId" value="@e.Id" />
-                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Bạn có chắc chắn muốn hủy đăng ký?')">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Bạn chắc chắn muốn hủy đăng ký sự kiện này?')">
                                     Hủy đăng ký
                                 </button>
                             </form>
@@ -158,7 +183,8 @@
                         }
                     </div>
                 }
-                else if (registrationOpen)
+
+                @if (registrationOpen && !registered)
                 {
                     <form asp-controller="EventRegistrations" asp-action="Register" method="post">
                         @Html.AntiForgeryToken()
@@ -167,13 +193,13 @@
                         @if (isFull)
                         {
                             <button type="submit" class="btn btn-warning fw-bold text-dark w-100 py-2">
-                                Sự kiện đã hết chỗ - Đăng ký vào Danh sách chờ
+                                <i class="bi bi-person-plus me-1"></i> Sự kiện đã hết chỗ - Đăng ký vào Danh sách chờ
                             </button>
                         }
                         else
                         {
                             <button type="submit" class="btn btn-primary fw-bold w-100 py-2">
-                                Đăng ký tham gia ngay
+                                <i class="bi bi-check2-circle me-1"></i> Đăng ký tham gia ngay
                             </button>
                         }
                     </form>
@@ -182,11 +208,46 @@
                 @if (!registrationOpen && !registered)
                 {
                     <div class="alert alert-secondary mb-0">
-                        Sự kiện hiện không mở đăng ký hoặc đã hết hạn.
+                        Sự kiện hiện không mở đăng ký.
                     </div>
                 }
             }
 
+            <!-- CHỨC NĂNG ĐIỂM DANH QR -->
+            @if (e.Status == EventStatus.Published)
+            {
+                <hr />
+
+                <h5 class="mb-3 fw-bold">Quản lý điểm danh</h5>
+
+                @if (Model.CanManage)
+                {
+                    <div class="alert alert-info mb-3">
+                        Admin hoặc Ban chủ nhiệm CLB có quyền mở phiên điểm danh cho sự kiện này.
+                    </div>
+
+                    <form asp-controller="CheckIn" asp-action="CreateSession" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="eventId" value="@e.Id" />
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-qr-code"></i> Tạo mã QR điểm danh
+                        </button>
+                    </form>
+                }
+                else if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="alert alert-secondary mb-0">
+                        Bạn không có quyền quản lý điểm danh của sự kiện này.
+                    </div>
+                }
+            }
+
+            <hr />
+
+            <!-- QUAY LẠI DANH SÁCH -->
+            <a asp-controller="Events" asp-action="Index" class="btn btn-secondary">
+                Quay lại danh sách
+            </a>
         </div>
     </div>
 </div>

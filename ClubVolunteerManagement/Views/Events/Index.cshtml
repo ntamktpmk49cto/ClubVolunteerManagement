@@ -7,23 +7,23 @@
 
 <div class="container mt-4">
 
-    <div class="d-flex justify-content-between mb-3">
-        <h2>Danh sách sự kiện</h2>
-
-        @if (Model.IsAdmin || Model.ManagedClubIds.Any())
+    <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0 fw-bold">Danh sách sự kiện</h2>
+    <div class="d-flex gap-2">
+        <!-- Nút Tạo sự kiện chỉ dành cho Admin / Manager -->
+        @if (User.IsInRole("Admin") || User.IsInRole("ClubManager"))
         {
-            <a asp-action="Create"
-               class="btn btn-primary">
-                + Tạo sự kiện
-            </a>
-            <a asp-controller="Events"
-               asp-action="Calendar"
-               class="btn btn-outline-primary">
-                <i class="bi bi-calendar3"></i>
-                Lịch sự kiện
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> + Tạo sự kiện
             </a>
         }
+
+        <!-- Nút Lịch sự kiện cho TẤT CẢ mọi người (bao gồm Sinh viên) -->
+        <a asp-action="Calendar" class="btn btn-outline-primary">
+            <i class="bi bi-calendar3"></i> Lịch sự kiện
+        </a>
     </div>
+</div>
 
     @if (TempData["Success"] != null)
     {
@@ -63,8 +63,7 @@
                     <td>@e.Title</td>
                     <td>@e.Club.Name</td>
                     <td>@e.Type</td>
-                    <td>@(e.StartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
-                    </td>
+                    <td>@(e.StartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))</td>
                     <td>@e.Capacity</td>
                     <td>@e.Status</td>
                     <td>
@@ -73,6 +72,19 @@
                            class="btn btn-info btn-sm mb-1">
                             Chi tiết
                         </a>
+
+                        @* Nút xem lại mã QR nhanh cho Admin / Quản lý CLB *@
+                        @if (canManage && e.Status == EventStatus.Published)
+                        {
+                            <a asp-controller="CheckIn"
+                               asp-action="ViewQr"
+                               asp-route-eventId="@e.Id"
+                               target="_blank"
+                               class="btn btn-outline-dark btn-sm mb-1">
+                                Mã QR
+                            </a>
+                        }
+
                         @if (canManage &&
                              (e.Status == EventStatus.Draft ||
                               e.Status == EventStatus.Published) &&
@@ -80,38 +92,32 @@
                         {
                             <a asp-action="Edit"
                                asp-route-id="@e.Id"
-                               class="btn btn-warning btn-sm">
+                               class="btn btn-warning btn-sm mb-1">
                                 Sửa
                             </a>
                         }
 
-                        @if (canManage &&
-                             e.Status == EventStatus.Draft)
+                        @if (canManage && e.Status == EventStatus.Draft)
                         {
                             <form asp-action="Submit"
                                   asp-route-id="@e.Id"
                                   method="post"
                                   class="d-inline">
-
                                 @Html.AntiForgeryToken()
-
                                 <button type="submit"
-                                        class="btn btn-primary btn-sm">
+                                        class="btn btn-primary btn-sm mb-1">
                                     Gửi duyệt
                                 </button>
                             </form>
                         }
 
-
-                        @if (Model.IsAdmin &&
-                             e.Status == EventStatus.PendingApproval)
+                        @if (Model.IsAdmin && e.Status == EventStatus.PendingApproval)
                         {
                             <form asp-action="Approve"
                                   asp-route-id="@e.Id"
                                   method="post"
                                   class="d-inline">
                                 @Html.AntiForgeryToken()
-
                                 <button type="submit"
                                         class="btn btn-success btn-sm mb-1">
                                     Duyệt
@@ -127,17 +133,14 @@
                                   asp-route-id="@e.Id"
                                   method="post"
                                   class="d-inline">
-
                                 @Html.AntiForgeryToken()
-
                                 <button type="submit"
-                                        class="btn btn-danger btn-sm"
+                                        class="btn btn-danger btn-sm mb-1"
                                         onclick="return confirm('Bạn chắc chắn muốn hủy sự kiện này?')">
                                     Hủy sự kiện
                                 </button>
                             </form>
                         }
-
                     </td>
                 </tr>
             }

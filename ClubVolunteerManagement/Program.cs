@@ -1,4 +1,3 @@
-
 using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
 using ClubVolunteerManagement.Data.Seed;
@@ -12,6 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<EventRegistrationService>();
 builder.Services.AddRazorPages();
+
+// Đăng ký HttpClient và dịch vụ tự động hóa ngrok khi chạy môi trường Development
+builder.Services.AddHttpClient();
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddHostedService<NgrokHostedService>();
+}
 
 // 2. Đọc chuỗi kết nối SQL Server.
 var connectionString = builder.Configuration

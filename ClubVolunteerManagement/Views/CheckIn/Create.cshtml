@@ -1,0 +1,37 @@
+﻿@{
+    ViewData["Title"] = "Tạo mã QR điểm danh";
+}
+
+<div class="container mt-4">
+    <h2>Tạo mã QR điểm danh</h2>
+
+    ```
+    <p>Nhập ID của sự kiện muốn mở điểm danh.</p>
+
+    <form asp-controller="CheckIn"
+          asp-action="CreateSession"
+          method="post">
+
+        @Html.AntiForgeryToken()
+
+        <div class="mb-3">
+            <label for="eventId" class="form-label">
+                ID sự kiện
+            </label>
+
+            <input type="number"
+                   id="eventId"
+                   name="eventId"
+                   class="form-control"
+                   min="1"
+                   required />
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-qr-code"></i>
+            Tạo mã QR
+        </button>
+    </form>
+    ```
+
+</div>
