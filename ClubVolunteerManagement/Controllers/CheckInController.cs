@@ -21,19 +21,61 @@ public class CheckInController : Controller
         _context = context;
     }
 
+<<<<<<< Updated upstream
     // 1. TẠO PHIÊN ĐIỂM DANH: Admin toàn hệ thống, Ban chủ nhiệm chỉ được tạo cho sự kiện CLB mình
     [Authorize(Roles = "Admin,ClubManager")]
+=======
+
+    // Kiểm tra người dùng có quyền quản lý CLB chứa sự kiện hay không.
+    private async Task<bool> CanManageClubAsync(int clubId)
+    {
+        // Admin được quản lý tất cả CLB.
+        if (User.IsInRole("Admin"))
+            return true;
+
+        // Lấy ID người dùng đang đăng nhập.
+        var userId = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+            return false;
+
+        // Chỉ Manager đã được duyệt của đúng CLB mới có quyền.
+        return await _context.ClubMembers
+            .AsNoTracking()
+            .AnyAsync(m =>
+                m.ClubId == clubId &&
+                m.UserId == userId &&
+                m.Status == ClubMemberStatus.Approved &&
+                m.Role == ClubRole.Manager);
+    }
+
+
+
+    // Tạo phiên điểm danh.
+    // TODO: Giới hạn action này cho đúng vai trò quản lý sự kiện.
+    // POST: /CheckIn/CreateSession
+    // Admin hoặc Manager của CLB được mở phiên điểm danh.
+    //[Authorize(Roles = "Admin")]
+>>>>>>> Stashed changes
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSession(int eventId)
     {
+<<<<<<< Updated upstream
         if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
             return Forbid();
+=======
+        // Lấy thông tin sự kiện.
+        var eventItem = await _context.Events
+            .FirstOrDefaultAsync(e => e.Id == eventId);
+>>>>>>> Stashed changes
 
         var eventItem = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
         if (eventItem == null)
             return NotFound("Không tìm thấy sự kiện.");
 
+<<<<<<< Updated upstream
         if (eventItem.Status != EventStatus.Published && eventItem.Status != EventStatus.InProgress)
         {
             TempData["Error"] = "Chỉ có thể tạo phiên điểm danh cho sự kiện đã công bố hoặc đang diễn ra.";
@@ -51,7 +93,47 @@ public class CheckInController : Controller
 
         var now = DateTime.UtcNow;
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+=======
+        // Kiểm tra quyền trên CLB tổ chức sự kiện.
+        if (!await CanManageClubAsync(eventItem.ClubId))
+            return Forbid();
 
+        // Chỉ cho phép mở điểm danh với sự kiện đã được công bố.
+        if (eventItem.Status != EventStatus.Published)
+        {
+            return BadRequest(
+                "Chỉ sự kiện đã được công bố mới có thể mở điểm danh.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        // Không cho mở điểm danh sau khi sự kiện kết thúc.
+        if (eventItem.EndAtUtc <= now)
+        {
+            return BadRequest(
+                "Sự kiện đã kết thúc, không thể mở điểm danh.");
+        }
+
+        // Kiểm tra sự kiện đã có phiên điểm danh đang mở chưa.
+        var existingSession = await _context.CheckInSessions
+            .AnyAsync(s =>
+                s.EventId == eventId &&
+                s.IsOpen &&
+                s.ClosedAtUtc == null &&
+                s.TokenExpiresAtUtc > now);
+
+        if (existingSession)
+        {
+            return BadRequest(
+                "Sự kiện đã có phiên điểm danh đang mở.");
+        }
+
+        // Tạo token ngẫu nhiên.
+        var token = Convert.ToHexString(
+            RandomNumberGenerator.GetBytes(32));
+>>>>>>> Stashed changes
+
+        // Chỉ lưu mã băm vào database.
         var session = new CheckInSession
         {
             EventId = eventId,
@@ -65,6 +147,7 @@ public class CheckInController : Controller
         _context.CheckInSessions.Add(session);
         await _context.SaveChangesAsync();
 
+<<<<<<< Updated upstream
         return RedirectToAction(nameof(ViewQr), new { eventId = session.EventId });
     }
 
@@ -98,6 +181,58 @@ public class CheckInController : Controller
         ViewBag.EventTitle = session.Event.Title;
         ViewBag.CheckInUrl = checkInUrl;
         ViewBag.ExpiresAt = session.TokenExpiresAtUtc.Value.AddHours(7).ToString("HH:mm - dd/MM/yyyy");
+=======
+        // Tạo URL xác nhận điểm danh.
+        var checkInUrl = Url.Action(
+            nameof(Attend),
+            "CheckIn",
+            new
+            {
+                sessionId = session.Id,
+                token
+            },
+            Request.Scheme);
+
+        // Hiển thị mã QR.
+        var html = $$"""
+        <!DOCTYPE html>
+        <html lang="vi">
+        <head>
+            <meta charset="utf-8">
+            <title>Mã QR điểm danh</title>
+            <style>
+                body {
+                    font-family: Arial;
+                    text-align: center;
+                    padding: 30px;
+                }
+                img {
+                    width: 280px;
+                    height: 280px;
+                }
+            </style>
+        </head>
+        <body>
+            <h2>{{System.Net.WebUtility.HtmlEncode(eventItem.Title)}}</h2>
+            <p>Quét mã QR để điểm danh sự kiện.</p>
+
+            <img
+                src="/CheckIn/QrImage?sessionId={{session.Id}}&amp;token={{Uri.EscapeDataString(token)}}"
+                alt="Mã QR điểm danh" />
+
+            <p>
+                Phiên điểm danh hết hạn khi sự kiện kết thúc.
+            </p>
+
+            <p>
+                <a href="{{System.Net.WebUtility.HtmlEncode(checkInUrl ?? "#")}}">
+                    Mở trang xác nhận điểm danh
+                </a>
+            </p>
+        </body>
+        </html>
+        """;
+>>>>>>> Stashed changes
 
         return View(session);
     }
@@ -236,8 +371,21 @@ public class CheckInController : Controller
         return RedirectToAction("Details", "Events", new { id = eventId });
     }
 
+<<<<<<< Updated upstream
     // 6. ĐÓNG PHIÊN ĐIỂM DANH: Phân quyền Admin & Ban chủ nhiệm CLB
     [Authorize(Roles = "Admin,ClubManager")]
+=======
+    [HttpGet]
+    public IActionResult Create()
+    {
+        return View();
+    }
+
+    // Đóng phiên điểm danh.
+    // POST: /CheckIn/CloseSession
+    // Admin hoặc Manager của CLB được đóng phiên điểm danh.
+    //[Authorize(Roles = "Admin")]
+>>>>>>> Stashed changes
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CloseSession(int sessionId)
@@ -249,15 +397,33 @@ public class CheckInController : Controller
         if (session == null)
             return NotFound();
 
+<<<<<<< Updated upstream
         if (!await AuthorizationHelper.CanManageEventAsync(_context, User, session.EventId))
             return Forbid();
 
+=======
+        // Kiểm tra quyền quản lý CLB tổ chức sự kiện.
+        if (!await CanManageClubAsync(session.Event.ClubId))
+            return Forbid();
+
+        if (!session.IsOpen)
+        {
+            return BadRequest(
+                "Phiên điểm danh đã được đóng trước đó.");
+        }
+
+>>>>>>> Stashed changes
         session.IsOpen = false;
         session.ClosedAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+<<<<<<< Updated upstream
         TempData["Success"] = "Đã đóng phiên điểm danh.";
         return RedirectToAction("Details", "Events", new { id = session.EventId });
+=======
+
+        return Content("Đã đóng phiên điểm danh thành công.");
+>>>>>>> Stashed changes
     }
 
     private static string HashToken(string token)
