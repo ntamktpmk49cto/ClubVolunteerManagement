@@ -1,0 +1,190 @@
+﻿@model List<ClubVolunteerManagement.Models.ClubMember>
+@using ClubVolunteerManagement.Models
+@using System.Security.Claims
+
+@{
+    ViewData["Title"] = "Danh sách thành viên";
+
+    int clubId = (int)(ViewData["ClubId"] ?? 0);
+    string clubName = ViewData["ClubName"]?.ToString() ?? "";
+
+    bool isAdmin = User.IsInRole("Admin");
+
+    string? currentUserId =
+        User.FindFirstValue(ClaimTypes.NameIdentifier);
+}
+
+<div class="container mt-4">
+
+    <h2>Quản lý thành viên CLB</h2>
+
+    <p class="text-muted">
+        Câu lạc bộ: <strong>@clubName</strong>
+    </p>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["Success"]
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">
+            @TempData["Error"]
+        </div>
+    }
+
+    <div class="d-flex justify-content-between mb-3">
+
+        <h5>Tổng thành viên: @Model.Count</h5>
+
+        <a asp-controller="ClubMembers"
+           asp-action="Pending"
+           asp-route-clubId="@clubId"
+           class="btn btn-primary">
+            Xem yêu cầu chờ duyệt
+        </a>
+
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">
+            CLB hiện chưa có thành viên chính thức.
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+
+            <table class="table table-bordered table-hover">
+
+                <thead class="table-dark">
+                    <tr>
+                        <th>STT</th>
+                        <th>Họ và tên</th>
+                        <th>MSSV</th>
+                        <th>Email</th>
+                        <th>Vai trò</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @{
+                        int stt = 1;
+                    }
+
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@stt</td>
+
+                            <td>
+                                @(item.User.FullName
+                                                        ?? item.User.UserName)
+                    </td>
+
+                            <td>@item.User.StudentCode</td>
+
+                            <td>@item.User.Email</td>
+
+                            <td>
+                        @if (item.Role == ClubRole.Manager)
+                                {
+                                    <span class="badge bg-primary">
+                                        Ban chủ nhiệm
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">
+                                        Thành viên
+                                    </span>
+                                }
+                            </td>
+
+                            <td>
+                                <div class="d-flex gap-2 flex-wrap">
+
+                                    @if (isAdmin)
+                                    {
+                                        @if (item.Role == ClubRole.Member)
+                                        {
+                                            <form asp-action="Promote"
+                                                  asp-controller="ClubMembers"
+                                                  method="post">
+                                                @Html.AntiForgeryToken()
+
+                                                <input type="hidden"
+                                                       name="memberId"
+                                                       value="@item.Id" />
+
+                                                <button type="submit"
+                                                        class="btn btn-success btn-sm">
+                                                    Bổ nhiệm
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form asp-action="Demote"
+                                                  asp-controller="ClubMembers"
+                                                  method="post">
+                                                @Html.AntiForgeryToken()
+
+                                                <input type="hidden"
+                                                       name="memberId"
+                                                       value="@item.Id" />
+
+                                                <button type="submit"
+                                                        class="btn btn-warning btn-sm">
+                                                    Thu hồi quyền
+                                                </button>
+                                            </form>
+                                        }
+                                    }
+
+                                    @if (item.UserId != currentUserId &&
+                                                                (isAdmin || item.Role == ClubRole.Member))
+                                    {
+                                        <form asp-action="Remove"
+                                              asp-controller="ClubMembers"
+                                              method="post"
+                                              onsubmit="return confirm('Xóa thành viên này khỏi CLB?')">
+
+                                            @Html.AntiForgeryToken()
+
+                                            <input type="hidden"
+                                                   name="memberId"
+                                                   value="@item.Id" />
+
+                                            <button type="submit"
+                                                    class="btn btn-danger btn-sm">
+                                                Xóa
+                                            </button>
+                                        </form>
+                                    }
+
+                                </div>
+                            </td>
+                        </tr>
+
+                        stt++;
+                    }
+                </tbody>
+            </table>
+
+        </div>
+    }
+
+    <a asp-controller="Clubs"
+       asp-action="Details"
+       asp-route-id="@clubId"
+       class="btn btn-secondary mt-3">
+        Quay lại CLB
+    </a>
+
+</div>
