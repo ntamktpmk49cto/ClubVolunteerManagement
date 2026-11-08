@@ -1,4 +1,4 @@
-﻿@model ClubVolunteerManagement.ViewModels.EventDetailsViewModel
+@model ClubVolunteerManagement.ViewModels.EventDetailsViewModel
 @using ClubVolunteerManagement.Models
 
 @{
@@ -17,8 +17,14 @@
         Model.MyRegistrationStatus == RegistrationStatus.Confirmed ||
         Model.MyRegistrationStatus == RegistrationStatus.Waitlisted;
 
+
+    // Kiểm tra quyền Admin và Quản lý
+    bool isAdmin = User.IsInRole("Admin");
+    bool isManager = User.IsInRole("ClubManager");
+
     // Kiểm tra sự kiện đã đủ chỗ chưa
     bool isFull = Model.ConfirmedCount >= e.Capacity;
+
 }
 
 <div class="container mt-4 mb-5">
@@ -241,6 +247,39 @@
                     </div>
                 }
             }
+
+
+            <!-- CHỨC NĂNG ĐIỂM DANH QR -->
+            @if (e.Status == EventStatus.Published || e.Status == EventStatus.InProgress)
+            {
+                <hr />
+
+                <h5 class="mb-3">Quản lý điểm danh</h5>
+
+                @if (isAdmin || isManager)
+                {
+                    <div class="alert alert-info">
+                        Ban quản lý có thể tạo phiên điểm danh và mã QR cho sự kiện này.
+                    </div>
+
+                    <form asp-controller="CheckIn"
+                          asp-action="CreateSession"
+                          method="post">
+
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden"
+                               name="eventId"
+                               value="@e.Id" />
+
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-qr-code"></i>
+                            Tạo mã QR điểm danh
+                        </button>
+                    </form>
+                }
+            }
+
 
             <hr />
 
