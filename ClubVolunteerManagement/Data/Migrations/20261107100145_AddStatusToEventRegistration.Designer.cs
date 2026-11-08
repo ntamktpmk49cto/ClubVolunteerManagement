@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ClubVolunteerManagement.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261021080916_AddRawTokenToCheckInSession")]
-    partial class AddRawTokenToCheckInSession
+    [Migration("20261107100145_AddStatusToEventRegistration")]
+    partial class AddStatusToEventRegistration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -204,9 +204,6 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.Property<DateTime>("OpenedAtUtc")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("RawToken")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("TokenExpiresAtUtc")
                         .HasColumnType("datetime2");

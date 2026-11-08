@@ -5,24 +5,18 @@
 namespace ClubVolunteerManagement.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class AddRawTokenToCheckInSession : Migration
+    public partial class AddStatusToEventRegistration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "RawToken",
-                table: "CheckInSessions",
-                type: "nvarchar(max)",
-                nullable: true);
+
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "RawToken",
-                table: "CheckInSessions");
+
         }
     }
 }

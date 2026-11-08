@@ -1,0 +1,159 @@
+﻿@{
+    ViewData["Title"] = "Lịch sự kiện";
+}
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold mb-1">Lịch sự kiện</h2>
+            <p class="text-muted mb-0">
+                Theo dõi các sự kiện và hoạt động của CLB
+            </p>
+        </div>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            Quay lại danh sách
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <div id="calendar"></div>
+        </div>
+    </div>
+</div>
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.20/index.global.min.css" rel="stylesheet" />
+
+<style>
+    #calendar {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+
+    .fc .fc-toolbar-title {
+        font-size: 1.35rem;
+        font-weight: 700;
+    }
+
+    .fc-event {
+        cursor: pointer;
+        border-radius: 4px;
+        padding: 2px 4px;
+    }
+
+    .fc .fc-button-primary {
+        background-color: #2563eb;
+        border-color: #2563eb;
+    }
+
+        .fc .fc-button-primary:hover {
+            background-color: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+
+    .fc .fc-daygrid-day-number {
+        text-decoration: none;
+        color: #333;
+    }
+
+    /* CSS hiển thị cho sự kiện bị hủy */
+    .event-cancelled {
+        background-color: #e5e7eb !important;
+        border-color: #9ca3af !important;
+        color: #6b7280 !important;
+        opacity: 0.7;
+        cursor: not-allowed !important;
+    }
+
+        .event-cancelled .fc-event-title,
+        .event-cancelled .fc-event-time {
+            text-decoration: line-through;
+            color: #6b7280 !important;
+        }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.20/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.20/locales-all.global.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const calendarEl = document.getElementById('calendar');
+
+        const calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'vi',
+            timeZone: 'local',
+            height: 'auto',
+            firstDay: 1,
+            nowIndicator: true,
+            navLinks: true,
+            dayMaxEvents: true,
+
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+
+            buttonText: {
+                today: 'Hôm nay',
+                month: 'Tháng',
+                week: 'Tuần',
+                day: 'Ngày'
+            },
+
+            events: {
+                url: '@Url.Action("CalendarEvents", "Events")',
+                method: 'GET',
+                failure: function () {
+                    alert('Không thể tải danh sách sự kiện!');
+                }
+            },
+
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            },
+
+            // 1. Tự động gắn class CSS xám/gạch ngang nếu sự kiện bị hủy
+            eventClassNames: function (arg) {
+                const props = arg.event.extendedProps;
+                if (props.isCancelled || props.status === 'Cancelled') {
+                    return ['event-cancelled'];
+                }
+                return [];
+            },
+
+            // 2. Chặn chuyển trang nếu sự kiện đã bị hủy
+            eventClick: function (info) {
+                info.jsEvent.preventDefault();
+
+                const props = info.event.extendedProps;
+                if (props.isCancelled || props.status === 'Cancelled') {
+                    alert('Sự kiện này đã bị ban tổ chức hủy bỏ!');
+                    return;
+                }
+
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                }
+            },
+
+            // 3. Hiển thị thông tin ghi chú khi rê chuột qua sự kiện
+            eventDidMount: function (info) {
+                const props = info.event.extendedProps;
+                const isCancelled = props.isCancelled || props.status === 'Cancelled';
+
+                info.el.title =
+                    info.event.title +
+                    '\nCLB: ' + props.clubName +
+                    '\nĐịa điểm: ' + props.location +
+                    '\nLoại: ' + props.type +
+                    (isCancelled ? '\nTrạng thái: [ĐÃ HỦY]' : '');
+            }
+        });
+
+        calendar.render();
+    });
+</script>

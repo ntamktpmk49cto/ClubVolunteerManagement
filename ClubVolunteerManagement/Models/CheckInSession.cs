@@ -17,6 +17,8 @@ public class CheckInSession
 
     public string? TokenHash { get; set; }
 
+    public string? RawToken { get; set; }
+
     public DateTime? TokenExpiresAtUtc
     { get; set; }
 }

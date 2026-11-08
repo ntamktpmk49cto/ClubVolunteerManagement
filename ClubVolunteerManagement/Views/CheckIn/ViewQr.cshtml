@@ -1,26 +1,30 @@
 ﻿@model ClubVolunteerManagement.Models.CheckInSession
+
 @{
-    ViewData["Title"] = "Mã QR điểm danh";
+    ViewData["Title"] = "Mã QR Điểm Danh";
 }
 
-<div class="container mt-5 text-center">
-    <div class="card shadow-sm mx-auto" style="max-width: 450px;">
-        <div class="card-body">
-            <h3 class="card-title">@ViewBag.EventTitle</h3>
-            <p class="text-muted">Quét mã QR bên dưới bằng điện thoại để điểm danh</p>
+<div class="container py-4 text-center">
+    <div class="card shadow-sm mx-auto" style="max-width: 520px; border-radius: 12px;">
+        <div class="card-body p-4">
+            <span class="badge bg-success mb-2 px-3 py-2">Đang mở điểm danh</span>
+            <h3 class="card-title text-primary fw-bold">@ViewBag.EventTitle</h3>
+            <p class="text-muted small">Sinh viên quét mã bên dưới để điểm danh sự kiện</p>
 
-            <div class="my-4">
-                <img src="@Url.Action("QrImage", "CheckIn", new { sessionId = Model.Id, token = "..." })"
-                     alt="QR Code"
-                     class="img-fluid border p-2"
-                     style="max-width: 250px;" />
+            <div class="p-3 my-3 bg-white border rounded shadow-sm d-inline-block">
+                <img src="/CheckIn/QrImage?sessionId=@ViewBag.SessionId&token=@Uri.EscapeDataString(ViewBag.Token)"
+                     alt="Mã QR Điểm Danh"
+                     class="img-fluid"
+                     style="width: 280px; height: 280px;" />
             </div>
 
-            <p class="small text-danger">Phiên điểm danh sẽ hết hạn khi sự kiện kết thúc.</p>
+            <p class="text-secondary small">Hạn điểm danh: <strong>@ViewBag.ExpiresAt</strong></p>
 
-            <a asp-controller="Events" asp-action="Details" asp-route-id="@Model.EventId" class="btn btn-outline-secondary">
-                Quay lại
-            </a>
+            <div class="mt-3">
+                <a href="@ViewBag.CheckInUrl" target="_blank" class="btn btn-outline-primary btn-sm">
+                    Mở link điểm danh trực tiếp
+                </a>
+            </div>
         </div>
     </div>
 </div>
