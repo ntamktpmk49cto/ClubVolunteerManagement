@@ -20,9 +20,14 @@
 
             <p class="text-secondary small">Hạn điểm danh: <strong>@ViewBag.ExpiresAt</strong></p>
 
-            <div class="mt-3">
+            <div class="mt-3 d-flex flex-column align-items-center gap-2">
                 <a href="@ViewBag.CheckInUrl" target="_blank" class="btn btn-outline-primary btn-sm">
                     Mở link điểm danh trực tiếp
+                </a>
+
+                <!-- Nút xem danh sách điểm danh mới thêm -->
+                <a asp-action="AttendanceList" asp-controller="CheckIn" asp-route-eventId="@Model.EventId" class="btn btn-success btn-sm mt-2">
+                    <i class="bi bi-list-check"></i> Xem danh sách sinh viên điểm danh
                 </a>
             </div>
         </div>

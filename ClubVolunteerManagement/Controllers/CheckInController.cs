@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
+using ClubVolunteerManagement.ViewModels;
 using ClubVolunteerManagement.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,20 +22,13 @@ public class CheckInController : Controller
         _context = context;
     }
 
-<<<<<<< Updated upstream
-    // 1. TẠO PHIÊN ĐIỂM DANH: Admin toàn hệ thống, Ban chủ nhiệm chỉ được tạo cho sự kiện CLB mình
-    [Authorize(Roles = "Admin,ClubManager")]
-=======
     // 1. TẠO PHIÊN ĐIỂM DANH: Quản lý CLB và Admin
->>>>>>> Stashed changes
+    [Authorize(Roles = "Admin,ClubManager")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSession(int eventId)
     {
-<<<<<<< Updated upstream
-=======
         // Kiểm tra quyền (Ban chủ nhiệm hoặc Admin)
->>>>>>> Stashed changes
         if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
             return Forbid();
 
@@ -238,12 +232,8 @@ public class CheckInController : Controller
         return RedirectToAction("Details", "Events", new { id = eventId });
     }
 
-<<<<<<< Updated upstream
-    // 6. ĐÓNG PHIÊN ĐIỂM DANH: Phân quyền Admin & Ban chủ nhiệm CLB
-    [Authorize(Roles = "Admin,ClubManager")]
-=======
     // 6. ĐÓNG PHIÊN ĐIỂM DANH
->>>>>>> Stashed changes
+    [Authorize(Roles = "Admin,ClubManager")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CloseSession(int sessionId)
@@ -264,6 +254,50 @@ public class CheckInController : Controller
         await _context.SaveChangesAsync();
         TempData["Success"] = "Đã đóng phiên điểm danh.";
         return RedirectToAction("Details", "Events", new { id = session.EventId });
+    }
+
+    // 7. XEM DANH SÁCH ĐIỂM DANH
+    [HttpGet]
+    public async Task<IActionResult> AttendanceList(int eventId)
+    {
+        // Kiểm tra quyền (chỉ Admin hoặc Ban chủ nhiệm mới được xem)
+        if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
+            return Forbid();
+
+        var eventItem = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+        if (eventItem == null)
+            return NotFound("Không tìm thấy sự kiện.");
+
+        // Lấy danh sách sinh viên ĐÃ ĐƯỢC DUYỆT tham gia sự kiện này
+        var registrations = await _context.EventRegistrations
+            .Include(r => r.User)
+            .Where(r => r.EventId == eventId && r.Status == RegistrationStatus.Confirmed)
+            .ToListAsync();
+
+        // Lấy danh sách những người ĐÃ ĐIỂM DANH
+        var attendances = await _context.Attendances
+            .Where(a => a.EventId == eventId)
+            .ToListAsync();
+
+        // Ghép 2 danh sách lại với nhau
+        var studentList = registrations.Select(r => new ClubVolunteerManagement.ViewModels.AttendanceStudentViewModel
+        {
+            StudentCode = r.User.StudentCode,
+            FullName = r.User.FullName,
+            Email = r.User.Email,
+            IsCheckedIn = attendances.Any(a => a.UserId == r.UserId)
+        }).OrderBy(s => s.StudentCode).ToList();
+
+        var viewModel = new ClubVolunteerManagement.ViewModels.EventAttendanceViewModel
+        {
+            EventId = eventId,
+            EventTitle = eventItem.Title,
+            TotalRegistered = studentList.Count,
+            TotalCheckedIn = studentList.Count(s => s.IsCheckedIn),
+            Students = studentList
+        };
+
+        return View(viewModel);
     }
 
     private static string HashToken(string token)
