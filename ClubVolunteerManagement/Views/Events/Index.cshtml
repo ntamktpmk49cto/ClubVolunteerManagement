@@ -7,17 +7,23 @@
 
 <div class="container mt-4">
 
-    <div class="d-flex justify-content-between mb-3">
-        <h2>Danh sách sự kiện</h2>
-
-        @if (Model.IsAdmin || Model.ManagedClubIds.Any())
+    <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0 fw-bold">Danh sách sự kiện</h2>
+    <div class="d-flex gap-2">
+        <!-- Nút Tạo sự kiện chỉ dành cho Admin / Manager -->
+        @if (User.IsInRole("Admin") || User.IsInRole("ClubManager"))
         {
-            <a asp-action="Create"
-               class="btn btn-primary">
-                + Tạo sự kiện
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> + Tạo sự kiện
             </a>
         }
+
+        <!-- Nút Lịch sự kiện cho TẤT CẢ mọi người (bao gồm Sinh viên) -->
+        <a asp-action="Calendar" class="btn btn-outline-primary">
+            <i class="bi bi-calendar3"></i> Lịch sự kiện
+        </a>
     </div>
+</div>
 
     @if (TempData["Success"] != null)
     {
