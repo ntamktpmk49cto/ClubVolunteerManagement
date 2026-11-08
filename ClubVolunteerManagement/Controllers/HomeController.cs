@@ -1,32 +1,68 @@
-using System.Diagnostics;
+using System.Security.Claims;
+using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-namespace ClubVolunteerManagement.Controllers
+namespace ClubVolunteerManagement.Controllers;
+
+public class HomeController : Controller
 {
-    public class HomeController : Controller
+    private readonly ApplicationDbContext _context;
+
+    public HomeController(ApplicationDbContext context)
     {
-        private readonly ILogger<HomeController> _logger;
+        _context = context;
+    }
 
-        public HomeController(ILogger<HomeController> logger)
+    public async Task<IActionResult> Index()
+    {
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // 1. CHỈ TẢI CÁC BÀI ĐĂNG CÓ GẮN SỰ KIỆN
+        var posts = await _context.Posts
+            .Include(p => p.User)
+            .Include(p => p.Event)
+                .ThenInclude(e => e!.Registrations)
+            .Where(p => p.EventId != null) // Lọc bỏ bài đăng thường
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ToListAsync();
+
+        // 2. Tải danh sách sự kiện được phép đăng (Admin lấy tất cả, Chủ nhiệm lấy sự kiện CLB mình)
+        List<Event> availableEvents = new List<Event>();
+
+        if (!string.IsNullOrEmpty(currentUserId))
         {
-            _logger = logger;
+            if (User.IsInRole("Admin"))
+            {
+                availableEvents = await _context.Events
+                    .Where(e => e.Status == EventStatus.Published || e.Status == EventStatus.InProgress)
+                    .OrderByDescending(e => e.StartAtUtc)
+                    .ToListAsync();
+            }
+            else
+            {
+                var managedClubIds = await _context.ClubMembers
+                    .Where(m => m.UserId == currentUserId &&
+                                m.Role == ClubRole.Manager &&
+                                m.Status == ClubMemberStatus.Approved)
+                    .Select(m => m.ClubId)
+                    .ToListAsync();
+
+                if (managedClubIds.Any())
+                {
+                    availableEvents = await _context.Events
+                        .Where(e => (e.Status == EventStatus.Published || e.Status == EventStatus.InProgress)
+                                 && managedClubIds.Contains(e.ClubId))
+                        .OrderByDescending(e => e.StartAtUtc)
+                        .ToListAsync();
+                }
+            }
         }
 
-        public IActionResult Index()
-        {
-            return View();
-        }
+        ViewBag.AvailableEvents = availableEvents;
+        ViewBag.CurrentUserId = currentUserId;
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
-
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
+        return View(posts);
     }
 }

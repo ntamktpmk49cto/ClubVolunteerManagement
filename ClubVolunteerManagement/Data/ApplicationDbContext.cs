@@ -14,6 +14,7 @@ public class ApplicationDbContext
         : base(options)
     {
     }
+    public DbSet<Post> Posts { get; set; }
 
     public DbSet<Club> Clubs => Set<Club>();
 
@@ -190,4 +191,5 @@ public class ApplicationDbContext
             .HasForeignKey(x => x.EventId)
             .OnDelete(DeleteBehavior.Restrict);
     }
+
 }

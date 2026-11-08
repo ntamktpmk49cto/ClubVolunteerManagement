@@ -81,7 +81,7 @@ public class NgrokHostedService : IHostedService
     private async Task<string?> GetPublicUrlAsync()
     {
         var client = _httpClientFactory.CreateClient();
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 10; i++)
         {
             try
             {

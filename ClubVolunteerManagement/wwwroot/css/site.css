@@ -20,3 +20,18 @@ html {
 body {
   margin-bottom: 60px;
 }
+/* Custom style Facebook feed */
+body {
+    background-color: #f0f2f5 !important; /* Màu nền xám nhạt đặc trưng của Facebook */
+}
+
+.btn-ghost {
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    padding: 8px 0;
+}
+
+    .btn-ghost:hover {
+        background-color: #e4e6eb;
+    }
