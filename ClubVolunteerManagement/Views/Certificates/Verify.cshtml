@@ -1,0 +1,124 @@
+﻿@model ClubVolunteerManagement.ViewModels.CertificateVerifyViewModel
+
+@{
+    ViewData["Title"] = "Xác thực chứng nhận";
+}
+
+<div class="container py-5">
+
+    <div class="card shadow-sm border-0 mx-auto"
+         style="max-width: 650px;">
+
+        <div class="card-body p-4">
+
+            <div class="text-center mb-4">
+
+                <i class="bi bi-patch-check-fill
+                          text-primary"
+                   style="font-size: 55px;"></i>
+
+                <h2 class="fw-bold text-primary mt-3">
+                    Xác thực chứng nhận
+                </h2>
+
+                <p class="text-muted">
+                    Hệ thống quản lý CLB và hoạt động tình nguyện
+                </p>
+
+            </div>
+
+            @if (!Model.Found)
+            {
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle-fill me-2"></i>
+                    Không tìm thấy chứng nhận có mã xác thực này.
+                </div>
+            }
+            else if (Model.IsValid)
+            {
+                <div class="alert alert-success text-center">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <strong>CHỨNG NHẬN HỢP LỆ</strong>
+                    <div>
+                        Chứng nhận tồn tại trong hệ thống
+                        và chưa bị thu hồi.
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-danger text-center">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>CHỨNG NHẬN KHÔNG CÒN HỢP LỆ</strong>
+                    <div>
+                        Chứng nhận đã bị thu hồi hoặc
+                        không còn thỏa điều kiện xác thực.
+                    </div>
+                </div>
+            }
+
+            @if (Model.Found)
+            {
+                <hr />
+
+                <h5 class="fw-bold mb-3">
+                    Thông tin chứng nhận
+                </h5>
+
+                <table class="table table-bordered">
+
+                    <tr>
+                        <th>Người nhận</th>
+                        <td>@Model.RecipientName</td>
+                    </tr>
+
+                    <tr>
+                        <th>Hoạt động</th>
+                        <td>@Model.EventTitle</td>
+                    </tr>
+
+                    <tr>
+                        <th>CLB tổ chức</th>
+                        <td>@Model.ClubName</td>
+                    </tr>
+
+                    <tr>
+                        <th>Số giờ tình nguyện</th>
+                        <td>
+                            @Model.Hours.ToString("0.##") giờ
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <th>Ngày cấp</th>
+                        <td>
+                            @(Model.IssuedAtUtc
+                                                    .AddHours(7)
+                                                    .ToString("dd/MM/yyyy HH:mm"))
+                    </td>
+                </tr>
+
+                    <tr>
+                        <th>Mã xác thực</th>
+                        <td class="small text-break">
+                            @Model.VerificationCode
+                        </td>
+                    </tr>
+
+                </table>
+                        }
+
+            <div class="text-center mt-4">
+
+                <a asp-controller="Home"
+                   asp-action="Index"
+                   class="btn btn-secondary">
+                    Về trang chủ
+                </a>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>

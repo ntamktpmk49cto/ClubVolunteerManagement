@@ -1,0 +1,179 @@
+﻿@model ClubVolunteerManagement.ViewModels.VolunteerHistoryViewModel
+
+@{
+    ViewData["Title"] = "Hồ sơ tình nguyện viên";
+}
+
+<div class="container py-4">
+
+    <h2 class="fw-bold text-primary mb-4">
+        Hồ sơ tình nguyện viên
+    </h2>
+
+    <!-- Thông tin sinh viên -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <h4 class="fw-bold">
+                @Model.FullName
+            </h4>
+
+            <p class="text-muted mb-1">
+                MSSV: @Model.StudentCode
+            </p>
+
+            <p class="text-muted mb-0">
+                Email: @Model.Email
+            </p>
+        </div>
+    </div>
+
+    <!-- Các chỉ số tổng hợp -->
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">
+                        Tổng giờ tình nguyện
+                    </h6>
+
+                    <h2 class="fw-bold text-success">
+                        @Model.TotalHours.ToString("0.##")
+                    </h2>
+
+                    <span class="text-muted">Giờ</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">
+                        Hoạt động đã tham gia
+                    </h6>
+
+                    <h2 class="fw-bold text-primary">
+                        @Model.ActivityCount
+                    </h2>
+
+                    <span class="text-muted">Hoạt động</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">
+                        Chứng nhận được cấp
+                    </h6>
+
+                    <h2 class="fw-bold text-warning">
+                        @Model.CertificateCount
+                    </h2>
+
+                    <span class="text-muted">Chứng nhận</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Lịch sử hoạt động -->
+    <div class="card shadow-sm border-0">
+
+        <div class="card-header bg-white py-3">
+            <h5 class="fw-bold mb-0">
+                Lịch sử hoạt động tình nguyện
+            </h5>
+        </div>
+
+        <div class="card-body">
+
+            @if (!Model.Activities.Any())
+            {
+                <div class="alert alert-info mb-0">
+                    Bạn chưa có hoạt động tình nguyện
+                    nào được ghi nhận giờ.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+
+                    <table class="table table-bordered
+                                      table-hover align-middle">
+
+                        <thead class="table-dark">
+                            <tr>
+                                <th>STT</th>
+                                <th>Tên hoạt động</th>
+                                <th>CLB tổ chức</th>
+                                <th>Địa điểm</th>
+                                <th>Ngày tổ chức</th>
+                                <th>Số giờ</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @{
+                                int stt = 1;
+                            }
+
+                            @foreach (var item in Model.Activities)
+                            {
+                                <tr>
+                                    <td>@stt</td>
+
+                                    <td class="fw-semibold">
+                                        @item.EventTitle
+                                    </td>
+
+                                    <td>
+                                        @item.ClubName
+                                    </td>
+
+                                    <td>
+                                        @item.Location
+                                    </td>
+
+                                    <td>
+                                        @(item.EventStartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
+
+                                    </td>
+
+                                    <td>
+                                        <span class="badge bg-success">
+                                            +@item.Hours.ToString("0.##") giờ
+                                        </span>
+                                    </td>
+                                </tr>
+
+                                stt++;
+                            }
+                        </tbody>
+
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="5"
+                                    class="text-end">
+                                    Tổng cộng:
+                                </th>
+
+                                <th class="text-success">
+                                    @Model.TotalHours.ToString("0.##")
+                                    giờ
+                                </th>
+                            </tr>
+                        </tfoot>
+
+                    </table>
+
+                </div>
+            }
+
+        </div>
+    </div>
+
+</div>

@@ -46,6 +46,30 @@
                             </li>
                         }
 
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark"
+                                   asp-controller="VolunteerHours"
+                                   asp-action="Index">
+                                    Giờ tình nguyện
+                                </a>
+                            </li>
+                        }
+
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-dark"
+                                   asp-controller="Certificates"
+                                   asp-action="Mine">
+                                    Giấy chứng nhận
+                                </a>
+                            </li>
+                        }
+
+
+
                         <li class="nav-item">
                             <a class="nav-link text-dark"
                                asp-controller="Events"
