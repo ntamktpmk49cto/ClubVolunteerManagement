@@ -1,0 +1,71 @@
+﻿@model ClubVolunteerManagement.ViewModels.EventAttendanceViewModel
+
+@{
+    ViewData["Title"] = "Danh sách điểm danh";
+}
+
+<div class="container mt-5">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Danh sách điểm danh: @Model.EventTitle</h4>
+            <a asp-action="ViewQr" asp-controller="CheckIn" asp-route-eventId="@Model.EventId" class="btn btn-light btn-sm">Quay lại QR</a>
+        </div>
+
+        <div class="card-body">
+            <!-- Khu vực thống kê -->
+            <div class="alert alert-info d-flex justify-content-between">
+                <span><strong>Tổng sinh viên đăng ký:</strong> @Model.TotalRegistered</span>
+                <span><strong>Đã điểm danh:</strong> <span class="text-success fw-bold">@Model.TotalCheckedIn</span></span>
+                <span><strong>Chưa điểm danh:</strong> <span class="text-danger fw-bold">@(Model.TotalRegistered - Model.TotalCheckedIn)</span></span>
+            </div>
+
+            <!-- Bảng danh sách -->
+            <div class="table-responsive mt-3">
+                <table class="table table-bordered table-hover align-middle text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th>STT</th>
+                            <th>Mã số SV</th>
+                            <th class="text-start">Họ và tên</th>
+                            <th class="text-start">Gmail</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int stt = 1;
+                        }
+                        @if (Model.Students.Any())
+                        {
+                            foreach (var student in Model.Students)
+                            {
+                                <tr>
+                                    <td>@(stt++)</td>
+                                    <td class="fw-bold">@student.StudentCode</td>
+                                    <td class="text-start">@student.FullName</td>
+                                    <td class="text-start">@student.Email</td>
+                                    <td>
+                                        @if (student.IsCheckedIn)
+                                        {
+                                            <span class="badge bg-success rounded-pill px-3 py-2">Đã điểm danh</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary rounded-pill px-3 py-2">Chưa điểm danh</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="text-muted py-4">Chưa có sinh viên nào đăng ký tham gia sự kiện này.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
