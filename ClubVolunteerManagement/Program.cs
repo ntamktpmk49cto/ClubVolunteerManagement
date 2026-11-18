@@ -1,3 +1,4 @@
+using QuestPDF.Infrastructure;
 using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
 using ClubVolunteerManagement.Data.Seed;
@@ -6,10 +7,15 @@ using Microsoft.EntityFrameworkCore;
 using ClubVolunteerManagement.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+QuestPDF.Settings.License = LicenseType.Community;
 
 // 1. Cấu hình ASP.NET Core MVC.
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<EventRegistrationService>();
+
+// Dịch vụ tạo giấy chứng nhận PDF.
+builder.Services.AddScoped<CertificatePdfService>();
+
 builder.Services.AddRazorPages();
 
 // Đăng ký HttpClient và dịch vụ tự động hóa ngrok khi chạy môi trường Development
