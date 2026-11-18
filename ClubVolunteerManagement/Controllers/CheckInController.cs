@@ -23,17 +23,20 @@ public class CheckInController : Controller
     }
 
     // 1. TẠO PHIÊN ĐIỂM DANH (Admin hoặc Ban chủ nhiệm CLB)
-    // 1. TẠO PHIÊN ĐIỂM DANH: Quản lý CLB và Admin
+
     [Authorize(Roles = "Admin,ClubManager")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSession(int eventId)
     {
-        var eventItem = await _context.Events
-            .FirstOrDefaultAsync(e => e.Id == eventId);
+
         // Kiểm tra quyền (Ban chủ nhiệm hoặc Admin)
         if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
             return Forbid();
+
+        var eventItem = await _context.Events
+            .FirstOrDefaultAsync(e => e.Id == eventId);
+
 
         if (eventItem == null)
             return NotFound("Không tìm thấy sự kiện.");
@@ -51,6 +54,17 @@ public class CheckInController : Controller
             return RedirectToAction("Details", "Events", new { id = eventId });
         }
 
+
+        var now = DateTime.UtcNow;
+
+        if (eventItem.EndAtUtc <= now)
+        {
+            TempData["Error"] = "Sự kiện đã kết thúc, không thể mở điểm danh.";
+            return RedirectToAction("Details", "Events", new { id = eventId });
+        }
+
+        // Kiểm tra phiên điểm danh đang mở
+
         var existingSession = await _context.CheckInSessions
             .FirstOrDefaultAsync(s =>
                 s.EventId == eventId &&
@@ -60,7 +74,6 @@ public class CheckInController : Controller
         if (existingSession != null)
         {
             // Nếu phiên hiện tại còn hợp lệ, hiển thị lại QR
-            var now = DateTime.UtcNow;
             if (existingSession.TokenExpiresAtUtc.HasValue &&
                 existingSession.TokenExpiresAtUtc.Value > now &&
                 !string.IsNullOrWhiteSpace(existingSession.RawToken))
@@ -75,11 +88,11 @@ public class CheckInController : Controller
 
         // Sinh token ngẫu nhiên
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-        
+
         var session = new CheckInSession
         {
             EventId = eventId,
-            OpenedAtUtc = DateTime.UtcNow,
+            OpenedAtUtc = now,
             IsOpen = true,
             RawToken = token,
             TokenHash = HashToken(token),
@@ -219,6 +232,7 @@ public class CheckInController : Controller
             return BadRequest("Bạn chưa được duyệt đăng ký tham gia sự kiện này.");
         }
 
+
         var alreadyCheckedIn = await _context.Attendances
             .AnyAsync(a => a.EventId == eventId && a.UserId == userId);
 
@@ -238,6 +252,7 @@ public class CheckInController : Controller
 
         _context.Attendances.Add(attendance);
         await _context.SaveChangesAsync();
+
 
         var hours = session.Event.VolunteerHours;
         if (hours > 0 && session.Event.Type == EventType.Volunteer)
@@ -261,8 +276,6 @@ public class CheckInController : Controller
         return RedirectToAction("Details", "Events", new { id = eventId });
     }
 
-    // 6. ĐÓNG PHIÊN ĐIỂM DANH (Admin hoặc Ban chủ nhiệm CLB)
-    // 6. ĐÓNG PHIÊN ĐIỂM DANH
     [Authorize(Roles = "Admin,ClubManager")]
     [HttpPost]
     [ValidateAntiForgeryToken]
@@ -295,7 +308,7 @@ public class CheckInController : Controller
         return RedirectToAction("Details", "Events", new { id = session.EventId });
     }
 
-    // 7. HÀM BẢO MẬT TOKEN
+
     // 7. XEM DANH SÁCH ĐIỂM DANH
     [HttpGet]
     public async Task<IActionResult> AttendanceList(int eventId)
@@ -340,6 +353,8 @@ public class CheckInController : Controller
         return View(viewModel);
     }
 
+
+    // 7. HÀM BẢO MẬT TOKEN
     private static string HashToken(string token)
     {
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
