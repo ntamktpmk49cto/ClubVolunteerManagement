@@ -15,7 +15,7 @@ public class NgrokHostedService : IHostedService
     private const int AppPort = 7255;
 
     // Nếu bạn có static domain miễn phí từ ngrok, điền vào đây. Nếu không, để chuỗi rỗng: ""
-    private const string CustomDomain = "lankiness-smasher-scoreless.ngrok-free.dev";
+    private const string CustomDomain = "";
 
     public NgrokHostedService(IHttpClientFactory httpClientFactory, ILogger<NgrokHostedService> logger)
     {

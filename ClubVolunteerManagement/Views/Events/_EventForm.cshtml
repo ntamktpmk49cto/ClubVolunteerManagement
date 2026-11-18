@@ -120,11 +120,12 @@
         </label>
 
         <input asp-for="StartAtLocal"
-               type="datetime-local"
+               type="text"
                asp-format="{0:yyyy-MM-ddTHH:mm}"
-               min="@minDateTime"
-               step="60"
-               class="form-control"
+               data-min-date="@minDateTime"
+               class="form-control js-vn-datetime"
+               autocomplete="off"
+               placeholder="dd-MM-yyyy HH:mm"
                required />
 
         <span asp-validation-for="StartAtLocal"
@@ -139,11 +140,12 @@
         </label>
 
         <input asp-for="EndAtLocal"
-               type="datetime-local"
+               type="text"
                asp-format="{0:yyyy-MM-ddTHH:mm}"
-               min="@minDateTime"
-               step="60"
-               class="form-control"
+               data-min-date="@minDateTime"
+               class="form-control js-vn-datetime"
+               autocomplete="off"
+               placeholder="dd-MM-yyyy HH:mm"
                required />
 
         <span asp-validation-for="EndAtLocal"
@@ -160,11 +162,12 @@
     </label>
 
     <input asp-for="RegistrationDeadlineLocal"
-           type="datetime-local"
+           type="text"
            asp-format="{0:yyyy-MM-ddTHH:mm}"
-           min="@minDateTime"
-           step="60"
-           class="form-control"
+           data-min-date="@minDateTime"
+           class="form-control js-vn-datetime"
+           autocomplete="off"
+           placeholder="dd-MM-yyyy HH:mm"
            required />
 
     <span asp-validation-for="RegistrationDeadlineLocal"
@@ -177,43 +180,66 @@
 </div>
 
 
-    <!-- 9. SỐ LƯỢNG -->
-    <div class="col-md-6 mb-3">
-        <label asp-for="Capacity"
-               class="form-label fw-bold">
-            Số lượng tối đa
-        </label>
+<!-- 9. SỐ LƯỢNG -->
+<div class="col-md-6 mb-3">
+    <label asp-for="Capacity"
+           class="form-label fw-bold">
+        Số lượng tối đa
+    </label>
 
-        <input asp-for="Capacity"
-               type="number"
-               min="1"
-               max="10000"
-               class="form-control" />
+    <input asp-for="Capacity"
+           type="number"
+           min="1"
+           max="10000"
+           class="form-control" />
 
-        <span asp-validation-for="Capacity"
-              class="text-danger"></span>
-    </div>
+    <span asp-validation-for="Capacity"
+          class="text-danger"></span>
+</div>
 
-    <!-- 10. GIỜ TÌNH NGUYỆN -->
-    <div class="col-md-6 mb-3">
-        <label asp-for="VolunteerHours"
-               class="form-label fw-bold">
-            Số giờ tình nguyện
-        </label>
+<!-- 10. GIỜ TÌNH NGUYỆN -->
+<div class="col-md-6 mb-3">
+    <label asp-for="VolunteerHours"
+           class="form-label fw-bold">
+        Số giờ tình nguyện
+    </label>
 
-        <input asp-for="VolunteerHours"
-               type="number"
-               min="0"
-               max="999.99"
-               step="0.5"
-               class="form-control" />
+    <input asp-for="VolunteerHours"
+           type="number"
+           min="0"
+           max="999.99"
+           step="0.5"
+           class="form-control" />
 
-        <span asp-validation-for="VolunteerHours"
-              class="text-danger"></span>
-    </div>
+    <span asp-validation-for="VolunteerHours"
+          class="text-danger"></span>
+</div>
 </div>
 
 <div class="alert alert-secondary">
     Chỉ sự kiện thuộc loại hoạt động tình nguyện
     mới được ghi nhận giờ tình nguyện.
 </div>
+
+
+<!-- Hiển thị ngày giờ theo định dạng Việt Nam: ngày-tháng-năm giờ:phút -->
+<link rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    document.querySelectorAll(".js-vn-datetime").forEach(function (input) {
+        // Tránh khởi tạo lặp nếu partial được render lại.
+        if (input._flatpickr) return;
+
+        flatpickr(input, {
+            enableTime: true,
+            time_24hr: true,
+            dateFormat: "Y-m-d\\TH:i", // Giá trị gửi về server vẫn theo ISO.
+            altInput: true,
+            altFormat: "d-m-Y H:i",       // Giao diện: ngày-tháng-năm giờ:phút.
+            allowInput: true,
+            minuteIncrement: 1,
+            minDate: input.dataset.minDate
+        });
+    });
+</script>

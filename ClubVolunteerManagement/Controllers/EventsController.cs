@@ -14,6 +14,7 @@ public class EventsController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _users;
+   
 
     public EventsController(
         ApplicationDbContext db,
@@ -143,7 +144,55 @@ public class EventsController : Controller
                 "Hoạt động tình nguyện phải có số giờ lớn hơn 0.");
         }
     }
+    // GET: /Events/Calendar
+    [AllowAnonymous]
+    public IActionResult Calendar()
+    {
+        return View();
+    }
+    // GET: /Events/CalendarEvents
+    [AllowAnonymous]
+    public async Task<IActionResult> CalendarEvents()
+    {
+        var clubs = User.Identity?.IsAuthenticated == true
+            ? await GetManagedClubsAsync()
+            : new List<Club>();
 
+        var managedIds = clubs.Select(x => x.Id).ToHashSet();
+        bool isAdmin = User.IsInRole("Admin");
+
+        var events = await _db.Events
+            .Include(x => x.Club)
+            .AsNoTracking()
+            .Where(x =>
+                isAdmin ||
+                managedIds.Contains(x.ClubId) ||
+                x.Status == EventStatus.Published ||
+                x.Status == EventStatus.InProgress ||
+                x.Status == EventStatus.Completed)
+            .ToListAsync();
+
+        var result = events.Select(x => new
+        {
+            id = x.Id,
+            title = x.Title,
+            start = DateTime.SpecifyKind(
+            x.StartAtUtc, DateTimeKind.Utc),
+
+            end = DateTime.SpecifyKind(
+            x.EndAtUtc, DateTimeKind.Utc),
+            url = Url.Action(nameof(Details), new { id = x.Id }),
+            extendedProps = new
+            {
+                clubName = x.Club.Name,
+                location = x.Location,
+                type = x.Type.ToString(),
+                status = x.Status.ToString()
+            }
+        });
+
+        return Json(result);
+    }
 
     // GET: /Events
     [AllowAnonymous]
@@ -563,6 +612,46 @@ public class EventsController : Controller
             "Đã hủy sự kiện thành công!";
 
         return RedirectToAction(nameof(Index));
-    }
 
+        {
+            var clubs = User.Identity?.IsAuthenticated == true
+                ? await GetManagedClubsAsync()
+                : new List<Club>();
+
+            var managedIds = clubs.Select(x => x.Id).ToHashSet();
+            bool isAdmin = User.IsInRole("Admin");
+
+            var events = await _db.Events
+                .Include(x => x.Club)
+                .AsNoTracking()
+                .Where(x =>
+                    isAdmin ||
+                    managedIds.Contains(x.ClubId) ||
+                    x.Status == EventStatus.Published ||
+                    x.Status == EventStatus.InProgress ||
+                    x.Status == EventStatus.Completed ||
+                    x.Status == EventStatus.Cancelled) // Bổ sung EventStatus.Cancelled để lấy cả sự kiện đã hủy
+                .ToListAsync();
+
+            var result = events.Select(x => new
+            {
+                id = x.Id,
+                // Tự động thêm tiền tố [ĐÃ HỦY] nếu sự kiện bị hủy
+                title = x.Status == EventStatus.Cancelled ? $"[ĐÃ HỦY] {x.Title}" : x.Title,
+                start = DateTime.SpecifyKind(x.StartAtUtc, DateTimeKind.Utc),
+                end = DateTime.SpecifyKind(x.EndAtUtc, DateTimeKind.Utc),
+                url = Url.Action(nameof(Details), new { id = x.Id }),
+                extendedProps = new
+                {
+                    clubName = x.Club.Name,
+                    location = x.Location,
+                    type = x.Type.ToString(),
+                    status = x.Status.ToString(),
+                    isCancelled = x.Status == EventStatus.Cancelled // Đánh dấu true/false cho Frontend
+                }
+            });
+
+            return Json(result);
+        }
+    }
 }

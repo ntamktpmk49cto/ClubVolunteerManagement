@@ -34,6 +34,7 @@ public enum EventStatus
 public enum RegistrationStatus
 {
     Confirmed = 1,
-    Waitlisted = 2,
-    Cancelled = 3
+    Cancelled = 2,
+    Waitlisted = 3, 
+    Attended = 4
 }

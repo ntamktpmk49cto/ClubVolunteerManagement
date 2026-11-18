@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using ClubVolunteerManagement.Data;
@@ -22,20 +22,29 @@ public class CheckInController : Controller
         _context = context;
     }
 
+    // 1. TẠO PHIÊN ĐIỂM DANH (Admin hoặc Ban chủ nhiệm CLB)
     // 1. TẠO PHIÊN ĐIỂM DANH: Quản lý CLB và Admin
     [Authorize(Roles = "Admin,ClubManager")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSession(int eventId)
     {
+        var eventItem = await _context.Events
+            .FirstOrDefaultAsync(e => e.Id == eventId);
         // Kiểm tra quyền (Ban chủ nhiệm hoặc Admin)
         if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
             return Forbid();
 
-        var eventItem = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
         if (eventItem == null)
             return NotFound("Không tìm thấy sự kiện.");
 
+        // Kiểm tra quyền Admin hoặc Manager của đúng CLB
+        if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
+        {
+            return Forbid();
+        }
+
+        // Chỉ cho phép mở điểm danh với sự kiện đã được công bố hoặc đang diễn ra
         if (eventItem.Status != EventStatus.Published && eventItem.Status != EventStatus.InProgress)
         {
             TempData["Error"] = "Chỉ có thể tạo phiên điểm danh cho sự kiện đã công bố hoặc đang diễn ra.";
@@ -43,14 +52,27 @@ public class CheckInController : Controller
         }
 
         var existingSession = await _context.CheckInSessions
-            .FirstOrDefaultAsync(s => s.EventId == eventId && s.IsOpen);
+            .FirstOrDefaultAsync(s =>
+                s.EventId == eventId &&
+                s.IsOpen &&
+                s.ClosedAtUtc == null);
 
         if (existingSession != null)
         {
-            return RedirectToAction(nameof(ViewQr), new { eventId = existingSession.EventId });
+            // Nếu phiên hiện tại còn hợp lệ, hiển thị lại QR
+            if (existingSession.TokenExpiresAtUtc.HasValue &&
+                existingSession.TokenExpiresAtUtc.Value > now &&
+                !string.IsNullOrWhiteSpace(existingSession.RawToken))
+            {
+                return RedirectToAction(nameof(ViewQr), new { eventId });
+            }
+
+            // Phiên cũ hết hạn thì đóng lại
+            existingSession.IsOpen = false;
+            existingSession.ClosedAtUtc = now;
         }
 
-        var now = DateTime.UtcNow;
+        // Sinh token ngẫu nhiên
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
         var session = new CheckInSession
@@ -66,23 +88,30 @@ public class CheckInController : Controller
         _context.CheckInSessions.Add(session);
         await _context.SaveChangesAsync();
 
-        return RedirectToAction(nameof(ViewQr), new { eventId = session.EventId });
+        TempData["Success"] = "Đã mở phiên điểm danh thành công!";
+        return RedirectToAction(nameof(ViewQr), new { eventId });
     }
 
-    // 2. XEM LẠI MÃ QR
-    [AllowAnonymous]
+    // 2. XEM LẠI MÃ QR (Chỉ Admin hoặc Ban chủ nhiệm CLB)
     [HttpGet]
     public async Task<IActionResult> ViewQr(int eventId)
     {
+        if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
+        {
+            return Forbid();
+        }
+
         var session = await _context.CheckInSessions
             .Include(s => s.Event)
-            .FirstOrDefaultAsync(s => s.EventId == eventId && s.IsOpen);
+            .FirstOrDefaultAsync(s =>
+                s.EventId == eventId &&
+                s.IsOpen &&
+                s.ClosedAtUtc == null);
 
         if (session == null ||
-            session.ClosedAtUtc != null ||
             !session.TokenExpiresAtUtc.HasValue ||
             session.TokenExpiresAtUtc.Value <= DateTime.UtcNow ||
-            string.IsNullOrEmpty(session.RawToken))
+            string.IsNullOrWhiteSpace(session.RawToken))
         {
             TempData["Error"] = "Sự kiện hiện chưa mở phiên điểm danh hoặc phiên đã hết hạn.";
             return RedirectToAction("Details", "Events", new { id = eventId });
@@ -103,7 +132,7 @@ public class CheckInController : Controller
         return View(session);
     }
 
-    // 3. TẠO HÌNH ẢNH MÃ QR
+    // 3. TẠO HÌNH ẢNH MÃ QR (Công khai cho người có token hợp lệ)
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> QrImage(int sessionId, string token)
@@ -111,13 +140,9 @@ public class CheckInController : Controller
         var session = await _context.CheckInSessions
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
-        if (session == null ||
-            !session.IsOpen ||
-            session.TokenExpiresAtUtc <= DateTime.UtcNow ||
-            string.IsNullOrWhiteSpace(session.TokenHash) ||
-            !TokenMatches(token, session.TokenHash))
+        if (!IsSessionValid(session, token))
         {
-            return NotFound("Phiên điểm danh không hợp lệ.");
+            return NotFound("Phiên điểm danh không hợp lệ hoặc đã hết hạn.");
         }
 
         var url = Url.Action(
@@ -126,15 +151,18 @@ public class CheckInController : Controller
             new { sessionId, token },
             Request.Scheme);
 
+        if (string.IsNullOrEmpty(url))
+            return BadRequest();
+
         using var generator = new QRCodeGenerator();
-        using var data = generator.CreateQrCode(url!, QRCodeGenerator.ECCLevel.Q);
+        using var data = generator.CreateQrCode(url, QRCodeGenerator.ECCLevel.Q);
         var qr = new PngByteQRCode(data);
         var png = qr.GetGraphic(10);
 
         return File(png, "image/png");
     }
 
-    // 4. MÀN HÌNH QUÉT MÃ ĐIỂM DANH
+    // 4. MÀN HÌNH XÁC NHẬN ĐIỂM DANH (Sinh viên quét mã QR)
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> Attend(int sessionId, string token)
@@ -232,6 +260,7 @@ public class CheckInController : Controller
         return RedirectToAction("Details", "Events", new { id = eventId });
     }
 
+    // 6. ĐÓNG PHIÊN ĐIỂM DANH (Admin hoặc Ban chủ nhiệm CLB)
     // 6. ĐÓNG PHIÊN ĐIỂM DANH
     [Authorize(Roles = "Admin,ClubManager")]
     [HttpPost]
@@ -246,16 +275,26 @@ public class CheckInController : Controller
             return NotFound();
 
         if (!await AuthorizationHelper.CanManageEventAsync(_context, User, session.EventId))
+        {
             return Forbid();
+        }
+
+        if (!session.IsOpen || session.ClosedAtUtc != null)
+        {
+            TempData["Error"] = "Phiên điểm danh đã được đóng trước đó.";
+            return RedirectToAction("Details", "Events", new { id = session.EventId });
+        }
 
         session.IsOpen = false;
         session.ClosedAtUtc = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-        TempData["Success"] = "Đã đóng phiên điểm danh.";
+
+        TempData["Success"] = "Đã đóng phiên điểm danh thành công.";
         return RedirectToAction("Details", "Events", new { id = session.EventId });
     }
 
+    // 7. HÀM BẢO MẬT TOKEN
     // 7. XEM DANH SÁCH ĐIỂM DANH
     [HttpGet]
     public async Task<IActionResult> AttendanceList(int eventId)
