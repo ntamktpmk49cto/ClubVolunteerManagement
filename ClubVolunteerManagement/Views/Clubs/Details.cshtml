@@ -92,7 +92,6 @@
                         </button>
                     </form>
                 }
-
                 else if (status == ClubMemberStatus.Pending)
                 {
                     <div class="alert alert-warning">
@@ -103,14 +102,9 @@
                           asp-action="Leave"
                           method="post"
                           onsubmit="return confirm('Hủy yêu cầu tham gia CLB?')">
-<<<<<<< HEAD
-                        @Html.AntiForgeryToken()
-
-=======
 
                         @Html.AntiForgeryToken()
 
->>>>>>> origin/master
                         <input type="hidden"
                                name="clubId"
                                value="@Model.Id" />
@@ -147,11 +141,9 @@
                         </form>
                     }
                 }
-
             }
 
             <div class="mt-3 d-flex gap-2 flex-wrap">
-
 
                 @if (canManage)
                 {
@@ -169,7 +161,6 @@
                         Danh sách thành viên
                     </a>
                 }
-
 
                 @if (User.IsInRole("Admin"))
                 {
@@ -190,8 +181,4 @@
         </div>
     </div>
 
-<<<<<<< HEAD
 </div>
-=======
-</div>
->>>>>>> origin/master
