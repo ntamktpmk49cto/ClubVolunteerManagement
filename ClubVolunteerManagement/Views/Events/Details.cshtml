@@ -19,6 +19,9 @@
 
     // Kiểm tra sự kiện đã đủ chỗ chưa
     bool isFull = Model.ConfirmedCount >= e.Capacity;
+
+    // Kiểm tra quyền Admin và Quản lý sự kiện
+    bool canManage = Model.CanManage || User.IsInRole("Admin") || User.IsInRole("ClubManager");
 }
 
 <div class="container mt-4 mb-5">
@@ -213,26 +216,32 @@
                 }
             }
 
-            <!-- CHỨC NĂNG ĐIỂM DANH QR -->
-            @if (e.Status == EventStatus.Published)
+            <!-- CHỨC NĂNG ĐIỂM DANH QR & XEM DANH SÁCH -->
+            @if (e.Status == EventStatus.Published || e.Status == EventStatus.InProgress)
             {
                 <hr />
 
                 <h5 class="mb-3 fw-bold">Quản lý điểm danh</h5>
 
-                @if (Model.CanManage)
+                @if (canManage)
                 {
                     <div class="alert alert-info mb-3">
-                        Admin hoặc Ban chủ nhiệm CLB có quyền mở phiên điểm danh cho sự kiện này.
+                        <i class="bi bi-info-circle me-1"></i> Admin hoặc Ban chủ nhiệm CLB có quyền tạo phiên điểm danh và xem danh sách sinh viên tham gia.
                     </div>
 
-                    <form asp-controller="CheckIn" asp-action="CreateSession" method="post">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="eventId" value="@e.Id" />
-                        <button type="submit" class="btn btn-success">
-                            <i class="bi bi-qr-code"></i> Tạo mã QR điểm danh
-                        </button>
-                    </form>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <form asp-controller="CheckIn" asp-action="CreateSession" method="post" class="m-0">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="eventId" value="@e.Id" />
+                            <button type="submit" class="btn btn-success fw-bold">
+                                <i class="bi bi-qr-code me-1"></i> Tạo mã QR điểm danh
+                            </button>
+                        </form>
+
+                        <a asp-controller="CheckIn" asp-action="AttendanceList" asp-route-eventId="@e.Id" class="btn btn-info text-white fw-bold">
+                            <i class="bi bi-list-check me-1"></i> Xem danh sách điểm danh
+                        </a>
+                    </div>
                 }
                 else if (User.Identity?.IsAuthenticated == true)
                 {

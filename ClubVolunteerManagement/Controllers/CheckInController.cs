@@ -4,6 +4,7 @@ using System.Text;
 using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
 using ClubVolunteerManagement.Services;
+using ClubVolunteerManagement.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,16 +25,13 @@ public class CheckInController : Controller
     // Kiểm tra người dùng có quyền quản lý CLB chứa sự kiện hay không
     private async Task<bool> CanManageClubAsync(int clubId)
     {
-        // Admin được quản lý tất cả CLB
         if (User.IsInRole("Admin"))
             return true;
 
-        // Lấy ID người dùng đang đăng nhập
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrWhiteSpace(userId))
             return false;
 
-        // Chỉ Manager đã được duyệt của đúng CLB mới có quyền
         return await _context.ClubMembers
             .AsNoTracking()
             .AnyAsync(m =>
@@ -43,19 +41,19 @@ public class CheckInController : Controller
                 m.Role == ClubRole.Manager);
     }
 
-    // 1. TẠO PHIÊN ĐIỂM DANH (Admin hoặc Manager của CLB)
+    // 1. TẠO PHIÊN ĐIỂM DANH (Admin hoặc Ban chủ nhiệm CLB)
     [Authorize(Roles = "Admin,ClubManager")]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateSession(int eventId)
     {
+        // Kiểm tra quyền (Ban chủ nhiệm hoặc Admin)
+        if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
+            return Forbid();
+
         var eventItem = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
         if (eventItem == null)
             return NotFound("Không tìm thấy sự kiện.");
-
-        // Kiểm tra quyền quản lý CLB tổ chức sự kiện
-        if (!await CanManageClubAsync(eventItem.ClubId))
-            return Forbid();
 
         // Chỉ cho phép mở điểm danh với sự kiện đã được công bố hoặc đang diễn ra
         if (eventItem.Status != EventStatus.Published && eventItem.Status != EventStatus.InProgress)
@@ -205,7 +203,6 @@ public class CheckInController : Controller
             .Include(s => s.Event)
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
-        // 1. Kiểm tra tính hợp lệ của phiên QR
         if (!IsSessionValid(session, token))
         {
             return BadRequest("Mã QR không hợp lệ hoặc đã hết hạn.");
@@ -213,7 +210,6 @@ public class CheckInController : Controller
 
         var eventId = session!.EventId;
 
-        // 2. Kiểm tra sinh viên có trong danh sách duyệt tham gia không
         var registered = await _context.EventRegistrations
             .AnyAsync(r => r.EventId == eventId &&
                            r.UserId == userId &&
@@ -224,7 +220,6 @@ public class CheckInController : Controller
             return BadRequest("Bạn chưa được duyệt đăng ký tham gia sự kiện này.");
         }
 
-        // 3. Ngăn chặn quét mã nhiều lần (Không được cộng giờ nhiều lần)
         var alreadyCheckedIn = await _context.Attendances
             .AnyAsync(a => a.EventId == eventId && a.UserId == userId);
 
@@ -233,7 +228,6 @@ public class CheckInController : Controller
             return BadRequest("Bạn đã điểm danh sự kiện này rồi, không thể điểm danh lại.");
         }
 
-        // 4. Tạo bản ghi điểm danh
         var attendance = new Attendance
         {
             EventId = eventId,
@@ -246,7 +240,6 @@ public class CheckInController : Controller
         _context.Attendances.Add(attendance);
         await _context.SaveChangesAsync();
 
-        // 5. Chỉ cộng giờ tình nguyện sau khi điểm danh hợp lệ và sự kiện có giờ tình nguyện
         var hours = session.Event.VolunteerHours;
         if (hours > 0 && session.Event.Type == EventType.Volunteer)
         {
@@ -297,6 +290,50 @@ public class CheckInController : Controller
         await _context.SaveChangesAsync();
         TempData["Success"] = "Đã đóng phiên điểm danh thành công.";
         return RedirectToAction("Details", "Events", new { id = session.EventId });
+    }
+
+    // 7. XEM DANH SÁCH ĐIỂM DANH
+    [HttpGet]
+    public async Task<IActionResult> AttendanceList(int eventId)
+    {
+        // Kiểm tra quyền (chỉ Admin hoặc Ban chủ nhiệm mới được xem)
+        if (!await AuthorizationHelper.CanManageEventAsync(_context, User, eventId))
+            return Forbid();
+
+        var eventItem = await _context.Events.FirstOrDefaultAsync(e => e.Id == eventId);
+        if (eventItem == null)
+            return NotFound("Không tìm thấy sự kiện.");
+
+        // Lấy danh sách sinh viên ĐÃ ĐƯỢC DUYỆT tham gia sự kiện này
+        var registrations = await _context.EventRegistrations
+            .Include(r => r.User)
+            .Where(r => r.EventId == eventId && r.Status == RegistrationStatus.Confirmed)
+            .ToListAsync();
+
+        // Lấy danh sách những người ĐÃ ĐIỂM DANH
+        var attendances = await _context.Attendances
+            .Where(a => a.EventId == eventId)
+            .ToListAsync();
+
+        // Ghép 2 danh sách lại với nhau
+        var studentList = registrations.Select(r => new AttendanceStudentViewModel
+        {
+            StudentCode = r.User.StudentCode,
+            FullName = r.User.FullName,
+            Email = r.User.Email,
+            IsCheckedIn = attendances.Any(a => a.UserId == r.UserId)
+        }).OrderBy(s => s.StudentCode).ToList();
+
+        var viewModel = new EventAttendanceViewModel
+        {
+            EventId = eventId,
+            EventTitle = eventItem.Title,
+            TotalRegistered = studentList.Count,
+            TotalCheckedIn = studentList.Count(s => s.IsCheckedIn),
+            Students = studentList
+        };
+
+        return View(viewModel);
     }
 
     private static string HashToken(string token)

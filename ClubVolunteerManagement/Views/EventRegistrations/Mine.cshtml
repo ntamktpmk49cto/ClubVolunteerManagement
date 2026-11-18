@@ -1,52 +1,139 @@
-﻿@model IEnumerable<ClubVolunteerManagement.Models.EventRegistration>
+﻿@model List<ClubVolunteerManagement.Models.EventRegistration>
+@using ClubVolunteerManagement.Models
 
 @{
-    ViewData["Title"] = "Sự kiện của tôi";
+    ViewData["Title"] = "Hoạt động của tôi";
 }
 
-<div class="container mt-4">
+<div class="container py-4">
+    <h2 class="fw-bold mb-4">Hồ sơ hoạt động &amp; Giờ tình nguyện</h2>
 
-    <h2>Sự kiện đã đăng ký</h2>
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
 
-    <table class="table table-striped table-bordered mt-3">
-        <thead class="table-dark">
-            <tr>
-                <th>Sự kiện</th>
-                <th>CLB</th>
-                <th>Thời gian</th>
-                <th>Trạng thái đăng ký</th>
-                <th>Thao tác</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            @foreach (var item in Model)
-            {
-                <tr>
-                    <td>@item.Event.Title</td>
-                    <td>@item.Event.Club.Name</td>
-                    <td>
-                            @(item.Event.StartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm"))
-                    </td>
-                    <td>@item.Status</td>
-                    <td>
-                        <a asp-controller="Events"
-                           asp-action="Details"
-                           asp-route-id="@item.EventId"
-                           class="btn btn-info btn-sm">
-                            Xem chi tiết
-                        </a>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <!-- Thẻ thống kê minh chứng -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-primary text-white h-100">
+                <div class="card-body">
+                    <small class="text-uppercase opacity-75">Sự kiện sắp tới</small>
+                    <h2 class="fw-bold mb-0 mt-1">@ViewBag.UpcomingCount</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-success text-white h-100">
+                <div class="card-body">
+                    <small class="text-uppercase opacity-75">Sự kiện đã hoàn thành</small>
+                    <h2 class="fw-bold mb-0 mt-1">@ViewBag.CompletedCount</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm bg-warning text-dark h-100">
+                <div class="card-body">
+                    <small class="text-uppercase opacity-75">Tổng giờ tình nguyện tích lũy</small>
+                    <h2 class="fw-bold mb-0 mt-1">@ViewBag.TotalVolunteerHours giờ</h2>
+                </div>
+            </div>
+        </div>
+    </div>
 
     @if (!Model.Any())
     {
         <div class="alert alert-info">
-            Bạn chưa đăng ký sự kiện nào.
+            Bạn chưa đăng ký tham gia sự kiện nào.
+            <a asp-controller="Events" asp-action="Index" class="alert-link">Khám phá sự kiện ngay</a>.
+                <a class="nav-link" asp-controller="EventRegistrations" asp-action="Mine">
+        Hoạt động của tôi
+    </a>
         </div>
     }
+    else
+    {
+        <div class="table-responsive bg-white rounded shadow-sm">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Sự kiện</th>
+                        <th>CLB tổ chức</th>
+                        <th>Thời gian (VN)</th>
+                        <th>Giờ tình nguyện</th>
+                        <th>Trạng thái đăng ký</th>
+                        <th>Trạng thái sự kiện</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        var startVn = item.Event.StartAtUtc.AddHours(7);
+                        var endVn = item.Event.EndAtUtc.AddHours(7);
 
+                        <tr>
+                            <td>
+                                <a asp-controller="Events"
+                                   asp-action="Details"
+                                   asp-route-id="@item.EventId"
+                                   class="fw-semibold text-decoration-none">
+                                    @item.Event.Title
+                                </a>
+                            </td>
+                            <td>@item.Event.Club?.Name</td>
+                            <td>
+                                <div>@startVn.ToString("dd/MM/yyyy HH:mm")</div>
+                                <small class="text-muted">đến @endVn.ToString("dd/MM/yyyy HH:mm")</small>
+                            </td>
+                            <td>
+                                @if (item.Event.Type == EventType.Volunteer && item.Event.VolunteerHours > 0)
+                                {
+                                    <span class="fw-bold text-success">+@item.Event.VolunteerHours giờ</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @switch (item.Status)
+                                {
+                                    case RegistrationStatus.Confirmed:
+                                        <span class="badge bg-success">Chính thức</span>
+                                        break;
+                                    case RegistrationStatus.Waitlisted:
+                                        <span class="badge bg-warning text-dark">Danh sách chờ</span>
+                                        break;
+                                    case RegistrationStatus.Cancelled:
+                                        <span class="badge bg-secondary">Đã hủy</span>
+                                        break;
+                                }
+                            </td>
+                            <td>
+                                @switch (item.Event.Status)
+                                {
+                                    case EventStatus.Completed:
+                                        <span class="badge bg-primary">Đã hoàn thành</span>
+                                        break;
+                                    case EventStatus.InProgress:
+                                        <span class="badge bg-info text-dark">Đang diễn ra</span>
+                                        break;
+                                    case EventStatus.Cancelled:
+                                        <span class="badge bg-danger">Sự kiện bị hủy</span>
+                                        break;
+                                    default:
+                                        <span class="badge bg-light text-dark border">Sắp diễn ra</span>
+                                        break;
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>

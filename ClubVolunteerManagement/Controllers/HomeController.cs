@@ -65,4 +65,8 @@ public class HomeController : Controller
 
         return View(posts);
     }
+    public IActionResult Privacy()
+    {
+        return View();
+    }
 }

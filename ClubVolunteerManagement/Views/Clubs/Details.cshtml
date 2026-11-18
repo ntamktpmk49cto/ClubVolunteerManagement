@@ -32,9 +32,7 @@
     }
 
     <div class="card shadow-sm mt-3">
-
         <div class="card-body">
-
             <h3 class="card-title">@Model.Name</h3>
 
             <p>
@@ -57,8 +55,7 @@
 
             <p>
                 <strong>Ngày tạo:</strong>
-                @Model.CreatedAtUtc.ToString("dd/MM/yyyy")
-                (UTC)
+                @Model.CreatedAtUtc.ToString("dd/MM/yyyy") (UTC)
             </p>
 
             <hr />
@@ -74,8 +71,7 @@
             }
             else if (!User.IsInRole("Admin"))
             {
-                if (status == null ||
-                status == ClubMemberStatus.Rejected)
+                if (status == null || status == ClubMemberStatus.Rejected)
                 {
                     <form asp-controller="ClubMembers"
                           asp-action="Join"
@@ -92,7 +88,6 @@
                         </button>
                     </form>
                 }
-
                 else if (status == ClubMemberStatus.Pending)
                 {
                     <div class="alert alert-warning">
@@ -103,7 +98,8 @@
                           asp-action="Leave"
                           method="post"
                           onsubmit="return confirm('Hủy yêu cầu tham gia CLB?')">
-@Html.AntiForgeryToken()
+
+                        @Html.AntiForgeryToken()
 
                         <input type="hidden"
                                name="clubId"
@@ -141,12 +137,9 @@
                         </form>
                     }
                 }
-
             }
 
             <div class="mt-3 d-flex gap-2 flex-wrap">
-
-
                 @if (canManage)
                 {
                     <a asp-controller="ClubMembers"
@@ -164,7 +157,6 @@
                     </a>
                 }
 
-
                 @if (User.IsInRole("Admin"))
                 {
                     <a asp-action="Edit"
@@ -178,7 +170,6 @@
                    class="btn btn-secondary">
                     Quay lại
                 </a>
-
             </div>
 
         </div>

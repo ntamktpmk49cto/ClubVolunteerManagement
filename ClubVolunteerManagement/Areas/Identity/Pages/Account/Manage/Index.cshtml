@@ -1,0 +1,103 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Hồ sơ sinh viên";
+    ViewData["ActivePage"] = "Index";
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">
+        @TempData["Error"]
+    </div>
+}
+
+<h3 class="fw-bold mb-3">@ViewData["Title"]</h3>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    var statusMessageClass = Model.StatusMessage.StartsWith("Lỗi") ? "danger" : "success";
+    <div class="alert alert-@statusMessageClass alert-dismissible fade show" role="alert">
+        @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <form id="profile-form" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+            <!-- Tên đăng nhập (chỉ đọc) -->
+            <div class="form-floating mb-3">
+                <input asp-for="Username" class="form-control bg-light" placeholder="Tên đăng nhập" disabled />
+                <label asp-for="Username" class="form-label">Tài khoản đăng nhập</label>
+            </div>
+
+            <!-- Họ và tên & MSSV -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-7">
+                    <div class="form-floating">
+                        <input asp-for="Input.FullName" class="form-control" placeholder="Nguyễn Văn A" />
+                        <label asp-for="Input.FullName"></label>
+                        <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="form-floating">
+                        <input asp-for="Input.StudentCode" class="form-control" placeholder="B2201234" />
+                        <label asp-for="Input.StudentCode"></label>
+                        <span asp-validation-for="Input.StudentCode" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trường / Khoa trực thuộc -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.SchoolOrFaculty" class="form-control" placeholder="VD: Trường Công nghệ Thông tin & Truyền thông" />
+                <label asp-for="Input.SchoolOrFaculty"></label>
+                <span asp-validation-for="Input.SchoolOrFaculty" class="text-danger small"></span>
+            </div>
+
+            <!-- Ngành học -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Major" class="form-control" placeholder="VD: Kỹ thuật phần mềm" />
+                <label asp-for="Input.Major"></label>
+                <span asp-validation-for="Input.Major" class="text-danger small"></span>
+            </div>
+
+            <!-- Khóa & Lớp -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-5">
+                    <div class="form-floating">
+                        <input asp-for="Input.Cohort" class="form-control" placeholder="VD: K48" />
+                        <label asp-for="Input.Cohort"></label>
+                        <span asp-validation-for="Input.Cohort" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="col-md-7">
+                    <div class="form-floating">
+                        <input asp-for="Input.ClassName" class="form-control" placeholder="VD: DI22V7A1" />
+                        <label asp-for="Input.ClassName"></label>
+                        <span asp-validation-for="Input.ClassName" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Số điện thoại -->
+            <div class="form-floating mb-4">
+                <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Nhập số điện thoại liên hệ" />
+                <label asp-for="Input.PhoneNumber"></label>
+                <span asp-validation-for="Input.PhoneNumber" class="text-danger small"></span>
+            </div>
+
+            <button id="update-profile-button" type="submit" class="w-100 btn btn-lg btn-primary fw-bold">
+                Lưu thông tin hồ sơ
+            </button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

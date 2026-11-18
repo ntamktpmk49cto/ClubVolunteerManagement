@@ -1,20 +1,35 @@
-﻿
+﻿using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Identity;
-using System.ComponentModel.DataAnnotations;
 
 namespace ClubVolunteerManagement.Models;
 
 public class ApplicationUser : IdentityUser
 {
-    [MaxLength(120)]
+    [StringLength(100)]
+    [Display(Name = "Họ và tên")]
     public string? FullName { get; set; }
 
-    [MaxLength(20)]
+    [StringLength(20)]
+    [Display(Name = "Mã số sinh viên")]
     public string? StudentCode { get; set; }
 
-    public DateTime CreatedAtUtc { get; set; }
-        = DateTime.UtcNow;
+    [StringLength(150)]
+    [Display(Name = "Trường / Khoa trực thuộc")]
+    public string? SchoolOrFaculty { get; set; }
 
-    public ICollection<ClubMember> ClubMemberships
-    { get; set; } = new List<ClubMember>();
+    [StringLength(100)]
+    [Display(Name = "Ngành học")]
+    public string? Major { get; set; }
+
+    [StringLength(20)]
+    [Display(Name = "Khóa")]
+    public string? Cohort { get; set; }
+
+    [StringLength(30)]
+    [Display(Name = "Lớp")]
+    public string? ClassName { get; set; }
+
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public ICollection<ClubMember> ClubMemberships { get; set; } = new List<ClubMember>();
 }

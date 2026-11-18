@@ -1,3 +1,4 @@
+global using ClubVolunteerManagement.Models;
 using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Data.Seed;
 using ClubVolunteerManagement.Models;
@@ -5,11 +6,9 @@ using ClubVolunteerManagement.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using NuGet.Packaging;
-using QuestPDF.Infrastructure;
 
 
 var builder = WebApplication.CreateBuilder(args);
-QuestPDF.Settings.License = LicenseType.Community;
 
 
 // 1. Cấu hình ASP.NET Core MVC.

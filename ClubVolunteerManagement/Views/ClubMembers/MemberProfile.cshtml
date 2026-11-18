@@ -1,0 +1,75 @@
+﻿@model ClubVolunteerManagement.Models.ClubMember
+@{
+    ViewData["Title"] = "Hồ sơ sinh viên - " + (Model.User?.FullName ?? Model.User?.Email);
+}
+
+<div class="container py-4" style="max-width: 750px;">
+    <div class="mb-3">
+        <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+        <div class="card-header bg-primary text-white p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="badge bg-light text-primary mb-2">CLB: @Model.Club?.Name</span>
+                    <h3 class="fw-bold mb-1">@(Model.User?.FullName ?? "Chưa cập nhật họ tên")</h3>
+                    <p class="mb-0 opacity-75">
+                        <i class="bi bi-person-badge me-1"></i> MSSV: <strong>@(Model.User?.StudentCode ?? "Chưa cập nhật")</strong>
+                    </p>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-warning text-dark fs-6">@Model.Status</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <h6 class="text-uppercase text-muted fw-bold small mb-3">Thông tin liên hệ</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded">
+                        <small class="text-muted d-block">Email học vụ</small>
+                        <span class="fw-semibold">@Model.User?.Email</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded">
+                        <small class="text-muted d-block">Số điện thoại</small>
+                        <span class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.User?.PhoneNumber) ? "Chưa cập nhật" : Model.User.PhoneNumber)</span>
+                    </div>
+                </div>
+            </div>
+
+            <h6 class="text-uppercase text-muted fw-bold small mb-3">Thông tin học vụ</h6>
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="p-3 bg-light rounded">
+                        <small class="text-muted d-block">Trường / Khoa trực thuộc</small>
+                        <span class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.User?.SchoolOrFaculty) ? "Chưa cập nhật" : Model.User.SchoolOrFaculty)</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 bg-light rounded">
+                        <small class="text-muted d-block">Ngành học</small>
+                        <span class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.User?.Major) ? "Chưa cập nhật" : Model.User.Major)</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded">
+                        <small class="text-muted d-block">Khóa</small>
+                        <span class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.User?.Cohort) ? "—" : Model.User.Cohort)</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-light rounded">
+                        <small class="text-muted d-block">Lớp</small>
+                        <span class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.User?.ClassName) ? "—" : Model.User.ClassName)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
