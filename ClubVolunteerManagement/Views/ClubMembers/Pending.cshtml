@@ -38,89 +38,98 @@
     }
     else
     {
-        <table class="table table-bordered table-striped">
-            <thead class="table-dark">
-                <tr>
-                    <th>STT</th>
-                    <th>Họ và tên</th>
-                    <th>MSSV</th>
-                    <th>Email</th>
-                    <th>Ngày gửi</th>
-                    <th>Thao tác</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                @{
-                    int stt = 1;
-                }
-
-                @foreach (var item in Model)
-                {
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped">
+                <thead class="table-dark">
                     <tr>
-                        <td>@stt</td>
-
-                        <td>
-                            @(item.User.FullName
-                                                ?? item.User.UserName)
-                </td>
-
-                        <td>@item.User.StudentCode</td>
-
-                        <td>@item.User.Email</td>
-
-                        <td>
-                            @item.JoinedAtUtc.ToString("dd/MM/yyyy")
-                        </td>
-
-                        <td>
-                            <div class="d-flex gap-2">
-
-                                <form asp-controller="ClubMembers"
-                                      asp-action="Approve"
-                                      method="post"
-                                      asp-antiforgery="true">
-
-                                    <input type="hidden"
-                                           name="memberId"
-                                           value="@item.Id" />
-
-                                    <button type="submit"
-                                            class="btn btn-success btn-sm">
-                                        Duyệt
-                                    </button>
-                                </form>
-
-                                <form asp-controller="ClubMembers"
-                                      asp-action="Reject"
-                                      method="post"
-                                      asp-antiforgery="true">
-
-                                    <input type="hidden"
-                                           name="memberId"
-                                           value="@item.Id" />
-
-                                    <button type="submit"
-                                            class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Từ chối yêu cầu này?')">
-                                        Từ chối
-                                    </button>
-                                </form>
-
-                            </div>
-                        </td>
+                        <th>STT</th>
+                        <th>Họ và tên</th>
+                        <th>MSSV</th>
+                        <th>Email</th>
+                        <th>Ngày gửi</th>
+                        <th>Thao tác</th>
                     </tr>
+                </thead>
+
+                <tbody>
+                    @{
+                        int stt = 1;
+                    }
+
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@stt</td>
+
+                            <td>
+                                @(item.User.FullName ?? item.User.UserName)
+                            </td>
+
+                            <td>@item.User.StudentCode</td>
+
+                            <td>@item.User.Email</td>
+
+                            <td>
+                                @item.JoinedAtUtc.ToString("dd/MM/yyyy")
+                            </td>
+
+                            <td>
+                                <div class="d-flex gap-2 flex-wrap">
+
+                                    <a asp-controller="ClubMembers"
+                                       asp-action="MemberProfile"
+                                       asp-route-clubId="@item.ClubId"
+                                       asp-route-userId="@item.UserId"
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-person-vcard"></i> Xem hồ sơ
+                                    </a>
+
+                                    <form asp-controller="ClubMembers"
+                                          asp-action="Approve"
+                                          method="post"
+                                          asp-antiforgery="true">
+
+                                        <input type="hidden"
+                                               name="memberId"
+                                               value="@item.Id" />
+
+                                        <button type="submit"
+                                                class="btn btn-success btn-sm">
+                                            Duyệt
+                                        </button>
+                                    </form>
+
+                                    <form asp-controller="ClubMembers"
+                                          asp-action="Reject"
+                                          method="post"
+                                          asp-antiforgery="true">
+
+                                        <input type="hidden"
+                                               name="memberId"
+                                               value="@item.Id" />
+
+                                        <button type="submit"
+                                                class="btn btn-danger btn-sm"
+                                                onclick="return confirm('Từ chối yêu cầu này?')">
+                                            Từ chối
+                                        </button>
+                                    </form>
+
+                                </div>
+                            </td>
+                        </tr>
 
                         stt++;
-                }
-            </tbody>
-        </table>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 
     <a asp-controller="Clubs"
        asp-action="Details"
        asp-route-id="@clubId"
-       class="btn btn-secondary">
+       class="btn btn-secondary mt-2">
         Quay lại CLB
     </a>
 

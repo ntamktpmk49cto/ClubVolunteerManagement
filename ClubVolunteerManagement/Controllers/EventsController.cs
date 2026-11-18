@@ -2,6 +2,7 @@
 using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
 using ClubVolunteerManagement.ViewModels;
+using DocumentFormat.OpenXml.InkML;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -169,25 +170,24 @@ public class EventsController : Controller
                 managedIds.Contains(x.ClubId) ||
                 x.Status == EventStatus.Published ||
                 x.Status == EventStatus.InProgress ||
-                x.Status == EventStatus.Completed)
+                x.Status == EventStatus.Completed ||
+                x.Status == EventStatus.Cancelled)
             .ToListAsync();
 
         var result = events.Select(x => new
         {
             id = x.Id,
-            title = x.Title,
-            start = DateTime.SpecifyKind(
-            x.StartAtUtc, DateTimeKind.Utc),
-
-            end = DateTime.SpecifyKind(
-            x.EndAtUtc, DateTimeKind.Utc),
+            title = x.Status == EventStatus.Cancelled ? $"[ĐÃ HỦY] {x.Title}" : x.Title,
+            start = DateTime.SpecifyKind(x.StartAtUtc, DateTimeKind.Utc),
+            end = DateTime.SpecifyKind(x.EndAtUtc, DateTimeKind.Utc),
             url = Url.Action(nameof(Details), new { id = x.Id }),
             extendedProps = new
             {
                 clubName = x.Club.Name,
                 location = x.Location,
                 type = x.Type.ToString(),
-                status = x.Status.ToString()
+                status = x.Status.ToString(),
+                isCancelled = x.Status == EventStatus.Cancelled
             }
         });
 
@@ -582,12 +582,9 @@ public class EventsController : Controller
         if (e == null)
             return NotFound();
 
-        // Chỉ Admin hoặc Ban chủ nhiệm CLB có quyền.
         if (!await CanManageAsync(e.ClubId))
             return Forbid();
 
-        // Chỉ được hủy sự kiện đã công bố,
-        // chưa bắt đầu diễn ra.
         if (e.Status != EventStatus.Published ||
             e.StartAtUtc <= DateTime.UtcNow)
         {
@@ -597,10 +594,8 @@ public class EventsController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        // Chuyển sự kiện sang trạng thái đã hủy.
         e.Status = EventStatus.Cancelled;
 
-        // Hủy các đăng ký còn hiệu lực.
         foreach (var registration in e.Registrations)
         {
             registration.Status = RegistrationStatus.Cancelled;
@@ -612,46 +607,5 @@ public class EventsController : Controller
             "Đã hủy sự kiện thành công!";
 
         return RedirectToAction(nameof(Index));
-
-        {
-            var clubs = User.Identity?.IsAuthenticated == true
-                ? await GetManagedClubsAsync()
-                : new List<Club>();
-
-            var managedIds = clubs.Select(x => x.Id).ToHashSet();
-            bool isAdmin = User.IsInRole("Admin");
-
-            var events = await _db.Events
-                .Include(x => x.Club)
-                .AsNoTracking()
-                .Where(x =>
-                    isAdmin ||
-                    managedIds.Contains(x.ClubId) ||
-                    x.Status == EventStatus.Published ||
-                    x.Status == EventStatus.InProgress ||
-                    x.Status == EventStatus.Completed ||
-                    x.Status == EventStatus.Cancelled) // Bổ sung EventStatus.Cancelled để lấy cả sự kiện đã hủy
-                .ToListAsync();
-
-            var result = events.Select(x => new
-            {
-                id = x.Id,
-                // Tự động thêm tiền tố [ĐÃ HỦY] nếu sự kiện bị hủy
-                title = x.Status == EventStatus.Cancelled ? $"[ĐÃ HỦY] {x.Title}" : x.Title,
-                start = DateTime.SpecifyKind(x.StartAtUtc, DateTimeKind.Utc),
-                end = DateTime.SpecifyKind(x.EndAtUtc, DateTimeKind.Utc),
-                url = Url.Action(nameof(Details), new { id = x.Id }),
-                extendedProps = new
-                {
-                    clubName = x.Club.Name,
-                    location = x.Location,
-                    type = x.Type.ToString(),
-                    status = x.Status.ToString(),
-                    isCancelled = x.Status == EventStatus.Cancelled // Đánh dấu true/false cho Frontend
-                }
-            });
-
-            return Json(result);
-        }
     }
 }

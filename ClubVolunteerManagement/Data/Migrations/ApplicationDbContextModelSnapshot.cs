@@ -30,6 +30,14 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("ClassName")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Cohort")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -45,14 +53,18 @@ namespace ClubVolunteerManagement.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("FullName")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Major")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
@@ -70,6 +82,10 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
+
+                    b.Property<string>("SchoolOrFaculty")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -135,7 +151,7 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.HasIndex("EventId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("Attendances", (string)null);
+                    b.ToTable("Attendances");
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.Certificate", b =>
@@ -179,7 +195,7 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.HasIndex("VerificationCode")
                         .IsUnique();
 
-                    b.ToTable("Certificates", (string)null);
+                    b.ToTable("Certificates");
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.CheckInSession", b =>
@@ -202,6 +218,9 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.Property<DateTime>("OpenedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("RawToken")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("TokenExpiresAtUtc")
                         .HasColumnType("datetime2");
 
@@ -212,7 +231,7 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasIndex("EventId");
 
-                    b.ToTable("CheckInSessions", (string)null);
+                    b.ToTable("CheckInSessions");
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.Club", b =>
@@ -241,7 +260,7 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Clubs", (string)null);
+                    b.ToTable("Clubs");
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.ClubMember", b =>
@@ -275,7 +294,7 @@ namespace ClubVolunteerManagement.Data.Migrations
                     b.HasIndex("ClubId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("ClubMembers", (string)null);
+                    b.ToTable("ClubMembers");
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.Event", b =>
@@ -307,6 +326,9 @@ namespace ClubVolunteerManagement.Data.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
+                    b.Property<int?>("MaxParticipants")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("RegistrationDeadlineUtc")
                         .HasColumnType("datetime2");
 
@@ -332,7 +354,7 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasIndex("ClubId");
 
-                    b.ToTable("Events", (string)null);
+                    b.ToTable("Events");
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.EventRegistration", b =>
@@ -365,7 +387,42 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasIndex("EventId", "Status", "RegisteredAtUtc");
 
-                    b.ToTable("EventRegistrations", (string)null);
+                    b.ToTable("EventRegistrations");
+                });
+
+            modelBuilder.Entity("ClubVolunteerManagement.Models.Post", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("EventId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Posts");
                 });
 
             modelBuilder.Entity("ClubVolunteerManagement.Models.VolunteerHour", b =>
@@ -402,7 +459,7 @@ namespace ClubVolunteerManagement.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("VolunteerHours", (string)null);
+                    b.ToTable("VolunteerHours");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -649,6 +706,23 @@ namespace ClubVolunteerManagement.Data.Migrations
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ClubVolunteerManagement.Models.Post", b =>
+                {
+                    b.HasOne("ClubVolunteerManagement.Models.Event", "Event")
+                        .WithMany()
+                        .HasForeignKey("EventId");
+
+                    b.HasOne("ClubVolunteerManagement.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Event");

@@ -1,6 +1,68 @@
 ﻿@{
-    ViewData["Title"] = "Privacy Policy";
+    ViewData["Title"] = "Chính sách bảo mật & Quy định";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="container py-4" style="max-width: 850px;">
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-4 p-md-5">
+            <div class="d-flex align-items-center gap-3 mb-4 border-bottom pb-3">
+                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle">
+                    <i class="bi bi-shield-lock-fill fs-2"></i>
+                </div>
+                <div>
+                    <h2 class="fw-bold mb-1 text-primary">Chính sách Bảo mật & Quy định Hệ thống</h2>
+                    <p class="text-muted mb-0 small">Áp dụng cho nền tảng Quản lý Câu lạc bộ & Hoạt động Tình nguyện (ClubVolunteerManagement)</p>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h5 class="fw-bold text-dark"><i class="bi bi-1-circle-fill text-primary me-2"></i>Thông tin cá nhân được thu thập</h5>
+                <p class="text-secondary">
+                    Khi đăng ký tài khoản và tham gia hoạt động trên hệ thống, chúng tôi lưu trữ các thông tin cơ bản phục vụ công tác quản lý sinh viên bao gồm:
+                </p>
+                <ul class="text-secondary">
+                    <li>Họ và tên, Mã số sinh viên (MSSV) và địa chỉ Email học vụ.</li>
+                    <li>Lịch sử gia nhập Câu lạc bộ, vai trò thành viên (Thành viên / Ban chủ nhiệm).</li>
+                    <li>Dữ liệu đăng ký sự kiện, lịch sử điểm danh và tổng số giờ tình nguyện tích lũy.</li>
+                </ul>
+            </div>
+
+            <div class="mb-4">
+                <h5 class="fw-bold text-dark"><i class="bi bi-2-circle-fill text-primary me-2"></i>Mục đích sử dụng dữ liệu</h5>
+                <p class="text-secondary">
+                    Thông tin của sinh viên chỉ được sử dụng cho các mục đích nội bộ sau:
+                </p>
+                <ul class="text-secondary">
+                    <li>Xác thực danh tính sinh viên khi đăng ký tham gia các CLB và sự kiện tình nguyện.</li>
+                    <li>Ghi nhận kết quả điểm danh trực tiếp tại sự kiện thông qua mã QR định danh.</li>
+                    <li>Tổng hợp, đối soát và minh chứng số giờ tình nguyện cho sinh viên.</li>
+                </ul>
+            </div>
+
+            <div class="mb-4">
+                <h5 class="fw-bold text-dark"><i class="bi bi-3-circle-fill text-primary me-2"></i>Quyền truy cập & Bảo mật thông tin</h5>
+                <ul class="text-secondary">
+                    <li><strong>Phân quyền chặt chẽ:</strong> Chỉ Quản trị viên hệ thống (Admin) và Ban chủ nhiệm của CLB tổ chức sự kiện mới có quyền xem danh sách sinh viên đăng ký và dữ liệu điểm danh của sự kiện đó.</li>
+                    <li><strong>Bảo mật tài khoản:</strong> Mật khẩu người dùng được mã hóa một chiều. Hệ thống cam kết không cung cấp, mua bán dữ liệu sinh viên cho bất kỳ bên thứ ba nào.</li>
+                </ul>
+            </div>
+
+            <div class="mb-4">
+                <h5 class="fw-bold text-dark"><i class="bi bi-4-circle-fill text-primary me-2"></i>Quy định về Điểm danh QR & Tham gia Sự kiện</h5>
+                <div class="alert alert-light border small text-secondary mb-0">
+                    <ul class="mb-0">
+                        <li class="mb-1">Sinh viên cần hủy đăng ký trước thời hạn quy định nếu không thể tham gia để nhường suất cho các bạn trong <strong>Danh sách chờ (Waiting List)</strong>.</li>
+                        <li class="mb-1">Mã QR điểm danh có hiệu lực giới hạn theo thời gian diễn ra sự kiện và được bảo mật bằng mã token động.</li>
+                        <li>Nghiêm cấm hành vi chia sẻ mã QR hoặc điểm danh hộ người khác. Mọi vi phạm sẽ bị hủy kết quả giờ tình nguyện của sự kiện đó.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="text-end mt-4 pt-3 border-top">
+                <a asp-controller="Home" asp-action="Index" class="btn btn-primary px-4">
+                    <i class="bi bi-house-door me-1"></i> Về trang chủ
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

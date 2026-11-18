@@ -34,6 +34,8 @@ public class Event
     { get; set; }
 
     public int Capacity { get; set; }
+    // Thêm vào class Event
+    public int? MaxParticipants { get; set; }
 
     public decimal VolunteerHours { get; set; }
 

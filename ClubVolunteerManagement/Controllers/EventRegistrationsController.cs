@@ -30,14 +30,34 @@ public class EventRegistrationsController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Register(int eventId)
     {
-        var userId = _users.GetUserId(User);
-        if (userId == null)
+        var user = await _users.GetUserAsync(User);
+        if (user == null)
             return Challenge();
 
-        // Sử dụng Transaction với IsolationLevel.Serializable để chống đăng ký vượt Capacity cùng thời điểm
+        // Bắt buộc sinh viên cập nhật Họ tên & MSSV trước khi đăng ký sự kiện
+        if (string.IsNullOrWhiteSpace(user.FullName) || string.IsNullOrWhiteSpace(user.StudentCode))
+        {
+            TempData["Error"] = "Vui lòng cập nhật đầy đủ Họ và tên cùng Mã số sinh viên (MSSV) trước khi đăng ký sự kiện.";
+            return Redirect("/Identity/Account/Manage");
+        }
+        bool isProfileIncomplete =
+                string.IsNullOrWhiteSpace(user.FullName) ||
+                string.IsNullOrWhiteSpace(user.StudentCode) ||
+                string.IsNullOrWhiteSpace(user.SchoolOrFaculty) ||
+                string.IsNullOrWhiteSpace(user.Major) ||
+                string.IsNullOrWhiteSpace(user.Cohort) ||
+                string.IsNullOrWhiteSpace(user.ClassName) ||
+                string.IsNullOrWhiteSpace(user.PhoneNumber);
+        if (isProfileIncomplete)
+        {
+            TempData["Error"] = "Vui lòng cập nhật đầy đủ toàn bộ thông tin hồ sơ sinh viên trước khi đăng ký tham gia CLB.";
+            return Redirect("/Identity/Account/Manage");
+        }
+
+        var userId = user.Id;
+
         await using var transaction = await _db.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
-        // Lock bản ghi Event trong CSDL
         var eventItem = await _db.Events
             .FromSqlInterpolated($"SELECT * FROM dbo.Events WITH (UPDLOCK, HOLDLOCK) WHERE Id = {eventId}")
             .FirstOrDefaultAsync();
@@ -57,7 +77,6 @@ public class EventRegistrationsController : Controller
             return RedirectToAction("Details", "Events", new { id = eventId });
         }
 
-        // Kiểm tra xem sinh viên đã có bản ghi đăng ký trước đó chưa
         var existingReg = await _db.EventRegistrations
             .FirstOrDefaultAsync(x => x.EventId == eventId && x.UserId == userId);
 
@@ -67,11 +86,9 @@ public class EventRegistrationsController : Controller
             return RedirectToAction("Details", "Events", new { id = eventId });
         }
 
-        // Đếm số sinh viên đã ở trạng thái chính thức (Confirmed)
         int confirmedCount = await _db.EventRegistrations
             .CountAsync(x => x.EventId == eventId && x.Status == RegistrationStatus.Confirmed);
 
-        // Còn chỗ -> Confirmed | Hết chỗ -> Waitlisted (Đưa vào Danh sách chờ)
         var targetStatus = confirmedCount < eventItem.Capacity
             ? RegistrationStatus.Confirmed
             : RegistrationStatus.Waitlisted;
@@ -157,14 +174,32 @@ public class EventRegistrationsController : Controller
     public async Task<IActionResult> Mine()
     {
         var userId = _users.GetUserId(User);
+        if (userId == null)
+            return Challenge();
 
         var registrations = await _db.EventRegistrations
             .Include(x => x.Event)
                 .ThenInclude(x => x.Club)
             .AsNoTracking()
             .Where(x => x.UserId == userId)
-            .OrderByDescending(x => x.RegisteredAtUtc)
+            .OrderByDescending(x => x.Event.StartAtUtc)
             .ToListAsync();
+
+        // Tính tổng giờ tình nguyện từ các sự kiện tình nguyện đã xác nhận tham gia và đã hoàn thành
+        var completedVolunteerRegs = registrations
+            .Where(x => x.Status == RegistrationStatus.Confirmed &&
+                        x.Event.Status == EventStatus.Completed &&
+                        x.Event.Type == EventType.Volunteer)
+            .ToList();
+
+        ViewBag.TotalVolunteerHours = completedVolunteerRegs.Sum(x => x.Event.VolunteerHours);
+        ViewBag.CompletedCount = registrations.Count(x =>
+            x.Status == RegistrationStatus.Confirmed &&
+            x.Event.Status == EventStatus.Completed);
+        ViewBag.UpcomingCount = registrations.Count(x =>
+            (x.Status == RegistrationStatus.Confirmed || x.Status == RegistrationStatus.Waitlisted) &&
+            x.Event.EndAtUtc >= DateTime.UtcNow &&
+            x.Event.Status != EventStatus.Cancelled);
 
         return View(registrations);
     }

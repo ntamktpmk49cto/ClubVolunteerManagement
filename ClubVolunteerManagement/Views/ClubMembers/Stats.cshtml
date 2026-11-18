@@ -1,0 +1,87 @@
+﻿@{
+    ViewData["Title"] = "Thống kê thành viên";
+    int clubId = (int)(ViewData["ClubId"] ?? 0);
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Thống kê cơ cấu thành viên</h2>
+            <p class="text-muted mb-0">Câu lạc bộ: <strong>@ViewData["ClubName"]</strong></p>
+        </div>
+        <a asp-action="Members" asp-route-clubId="@clubId" class="btn btn-outline-secondary">
+            Quay lại danh sách
+        </a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm p-3">
+                <span class="text-muted small">Thành viên chính thức</span>
+                <h3 class="fw-bold text-primary mb-0">@ViewBag.TotalMembers sinh viên</h3>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm p-3">
+                <span class="text-muted small">Đơn đăng ký đang chờ duyệt</span>
+                <h3 class="fw-bold text-warning mb-0">@ViewBag.PendingCount đơn</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white fw-bold">Tỷ lệ theo Trường / Khoa</div>
+                <div class="card-body">
+                    <canvas id="facultyChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white fw-bold">Số lượng theo Khóa học</div>
+                <div class="card-body">
+                    <canvas id="cohortChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const facultyLabels = @Html.Raw(ViewBag.FacultyLabels);
+        const facultyData = @Html.Raw(ViewBag.FacultyData);
+
+        new Chart(document.getElementById('facultyChart'), {
+            type: 'doughnut',
+            data: {
+                labels: facultyLabels,
+                datasets: [{
+                    data: facultyData,
+                    backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997']
+                }]
+            }
+        });
+
+        const cohortLabels = @Html.Raw(ViewBag.CohortLabels);
+        const cohortData = @Html.Raw(ViewBag.CohortData);
+
+        new Chart(document.getElementById('cohortChart'), {
+            type: 'bar',
+            data: {
+                labels: cohortLabels,
+                datasets: [{
+                    label: 'Số sinh viên',
+                    data: cohortData,
+                    backgroundColor: '#0d6efd'
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    </script>
+}
