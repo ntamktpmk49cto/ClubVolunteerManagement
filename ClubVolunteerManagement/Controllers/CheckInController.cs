@@ -60,6 +60,7 @@ public class CheckInController : Controller
         if (existingSession != null)
         {
             // Nếu phiên hiện tại còn hợp lệ, hiển thị lại QR
+            var now = DateTime.UtcNow;
             if (existingSession.TokenExpiresAtUtc.HasValue &&
                 existingSession.TokenExpiresAtUtc.Value > now &&
                 !string.IsNullOrWhiteSpace(existingSession.RawToken))
@@ -74,11 +75,11 @@ public class CheckInController : Controller
 
         // Sinh token ngẫu nhiên
         var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
-
+        
         var session = new CheckInSession
         {
             EventId = eventId,
-            OpenedAtUtc = now,
+            OpenedAtUtc = DateTime.UtcNow,
             IsOpen = true,
             RawToken = token,
             TokenHash = HashToken(token),

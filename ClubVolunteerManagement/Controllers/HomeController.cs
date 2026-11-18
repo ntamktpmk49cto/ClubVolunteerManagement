@@ -1,32 +1,56 @@
 using System.Diagnostics;
+using ClubVolunteerManagement.Data;
 using ClubVolunteerManagement.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
-namespace ClubVolunteerManagement.Controllers
+namespace ClubVolunteerManagement.Controllers;
+
+public class HomeController : Controller
 {
-    public class HomeController : Controller
+    private readonly ApplicationDbContext _context;
+
+    public HomeController(ApplicationDbContext context)
     {
-        private readonly ILogger<HomeController> _logger;
+        _context = context;
+    }
 
-        public HomeController(ILogger<HomeController> logger)
+    public async Task<IActionResult> Index()
+    {
+        ViewBag.TotalClubs = await _context.Clubs.CountAsync();
+        ViewBag.TotalEvents = await _context.Events
+            .CountAsync(e => e.Status == EventStatus.Published || e.Status == EventStatus.Completed);
+        ViewBag.TotalVolunteerHours = await _context.VolunteerHours
+            .SumAsync(v => (decimal?)v.Hours) ?? 0m;
+
+        var upcomingEvents = await _context.Events
+            .Include(e => e.Club)
+            .Where(e => e.Status == EventStatus.Published && e.EndAtUtc >= DateTime.UtcNow)
+            .OrderBy(e => e.StartAtUtc)
+            .Take(6)
+            .ToListAsync();
+
+        if (!upcomingEvents.Any())
         {
-            _logger = logger;
+            upcomingEvents = await _context.Events
+                .Include(e => e.Club)
+                .Where(e => e.Status == EventStatus.Published)
+                .OrderByDescending(e => e.StartAtUtc)
+                .Take(6)
+                .ToListAsync();
         }
 
-        public IActionResult Index()
-        {
-            return View();
-        }
+        return View(upcomingEvents);
+    }
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
+    public IActionResult Privacy()
+    {
+        return View();
+    }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error()
+    {
+        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }
