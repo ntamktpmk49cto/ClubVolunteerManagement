@@ -1,5 +1,110 @@
-﻿@model IEnumerable<ClubVolunteerManagement.Models.Post>
+﻿@model IEnumerable<ClubVolunteerManagement.Models.Event>
+
+@model IEnumerable<ClubVolunteerManagement.Models.Post>
 @{
+    ViewData["Title"] = "Trang chủ";
+    int totalClubs = ViewBag.TotalClubs ?? 0;
+    int totalEvents = ViewBag.TotalEvents ?? 0;
+    decimal totalHours = ViewBag.TotalVolunteerHours ?? 0m;
+}
+
+<div class="container mt-4 mb-5">
+    <!-- HERO BANNER -->
+    <div class="p-5 mb-4 bg-primary text-white rounded-3 shadow-sm">
+        <div class="container-fluid py-2">
+            <h1 class="display-5 fw-bold">Kết nối Sinh viên & Hoạt động Tình nguyện</h1>
+            <p class="col-md-8 fs-5 mt-3">
+                Tham gia các câu lạc bộ, đăng ký chiến dịch tình nguyện, điểm danh nhanh bằng mã QR và tích lũy giờ hoạt động xã hội minh bạch.
+            </p>
+            <div class="d-flex flex-wrap gap-2 mt-4">
+                <a asp-controller="Events" asp-action="Index" class="btn btn-light btn-lg fw-semibold text-primary">
+                    Khám phá sự kiện
+                </a>
+                <a asp-controller="Clubs" asp-action="Index" class="btn btn-outline-light btn-lg">
+                    Danh sách Câu lạc bộ
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- THỐNG KÊ NHANH -->
+    <div class="row g-3 mb-5 text-center">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body py-4">
+                    <div class="text-muted small text-uppercase fw-semibold">Câu lạc bộ hoạt động</div>
+                    <div class="display-6 fw-bold text-primary mt-1">@totalClubs</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body py-4">
+                    <div class="text-muted small text-uppercase fw-semibold">Sự kiện đã tổ chức</div>
+                    <div class="display-6 fw-bold text-success mt-1">@totalEvents</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body py-4">
+                    <div class="text-muted small text-uppercase fw-semibold">Tổng giờ tình nguyện</div>
+                    <div class="display-6 fw-bold text-warning mt-1">@totalHours.ToString("0.##")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DANH SÁCH SỰ KIỆN NỔI BẬT -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="fw-bold mb-0">Sự kiện tình nguyện nổi bật</h3>
+        <a asp-controller="Events" asp-action="Index" class="btn btn-sm btn-outline-primary">
+            Xem tất cả &rarr;
+        </a>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-light border text-center py-4 text-muted">
+            Hiện chưa có sự kiện nào được công bố.
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var item in Model)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary-subtle text-primary">@item.Club?.Name</span>
+                                <span class="badge bg-success">+@item.VolunteerHours.ToString("0.##") giờ</span>
+                            </div>
+
+                            <h5 class="card-title fw-bold">@item.Title</h5>
+
+                            <p class="text-muted small mb-2">
+                                <strong>Địa điểm:</strong> @item.Location
+                            </p>
+                            <p class="text-muted small mb-3">
+                                <strong>Bắt đầu:</strong> @item.StartAtUtc.AddHours(7).ToString("dd/MM/yyyy HH:mm")
+                            </p>
+
+                            <div class="mt-auto pt-2 border-top d-flex justify-content-between align-items-center">
+                                <span class="small text-secondary">Chỉ tiêu: @item.Capacity chỗ</span>
+                                <a asp-controller="Events" asp-action="Details" asp-route-id="@item.Id"
+                                   class="btn btn-sm btn-primary">
+                                    Chi tiết
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
     ViewData["Title"] = "Bảng tin Sự kiện";
     var currentUserId = ViewBag.CurrentUserId as string;
     var availableEvents = ViewBag.AvailableEvents as List<ClubVolunteerManagement.Models.Event> ?? new List<ClubVolunteerManagement.Models.Event>();
